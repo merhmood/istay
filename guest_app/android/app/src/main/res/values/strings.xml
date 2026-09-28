@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StayNaija</string>
+
+    <!-- Facebook Login. The Facebook Android SDK initialises itself at app
+         startup via its own ContentProvider (merged into this app's manifest
+         automatically as a transitive dependency of flutter_facebook_auth) -
+         it does this regardless of whether Dart code ever calls into the
+         plugin, and THROWS AT APP LAUNCH if these are missing entirely. These
+         placeholders exist so the app starts; the "Continue with Facebook"
+         button will still fail cleanly with Facebook's own "invalid app"
+         error until real values replace them.
+
+         Get real values from https://developers.facebook.com/apps -
+         Settings > Basic gives the App ID and Client Token. -->
+    <string name="facebook_app_id">000000000000000</string>
+    <string name="facebook_client_token">REPLACE_WITH_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme">fb000000000000000</string>
+</resources>
