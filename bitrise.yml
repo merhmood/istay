@@ -10,6 +10,18 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 # installable artifact (development/ad-hoc distribution) - not the App Store -
 # so it can go straight onto a registered test iPhone without TestFlight.
 # See ios/ExportOptions.plist in each app for the one-time setup this needs.
+#
+# API_BASE_URL is read from a Bitrise Secret (Workflow Editor -> Secrets tab
+# on this app - NOT the GitHub repo's secrets, which Bitrise has no access
+# to) and passed through as a Dart define, the same mechanism
+# `flutter build apk --dart-define=API_BASE_URL=...` uses for Android - see
+# ApiConfig.baseUrl in staynaija_shared.
+#
+# Deliberately NOT declared under a workflow `envs:` block here: Bitrise
+# resolves workflow-level envs *after* Secrets, so a value set here would
+# always beat the Secret instead of falling back to it. The script below
+# defaults to localhost with a plain bash `${VAR:-default}` instead, which
+# doesn't participate in that ordering.
 
 workflows:
   deploy_guest_ios:
@@ -36,7 +48,11 @@ workflows:
                 #!/usr/bin/env bash
                 set -euo pipefail
                 cd "$APP_DIR"
-                flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+                : "${API_BASE_URL:=http://localhost:8000}"
+                echo "Building against API_BASE_URL=$API_BASE_URL"
+                flutter build ipa --release \
+                  --export-options-plist=ios/ExportOptions.plist \
+                  --dart-define=API_BASE_URL="$API_BASE_URL"
       - deploy-to-bitrise-io@2:
           inputs:
             - deploy_path: $APP_DIR/build/ios/ipa
@@ -65,7 +81,11 @@ workflows:
                 #!/usr/bin/env bash
                 set -euo pipefail
                 cd "$APP_DIR"
-                flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+                : "${API_BASE_URL:=http://localhost:8000}"
+                echo "Building against API_BASE_URL=$API_BASE_URL"
+                flutter build ipa --release \
+                  --export-options-plist=ios/ExportOptions.plist \
+                  --dart-define=API_BASE_URL="$API_BASE_URL"
       - deploy-to-bitrise-io@2:
           inputs:
             - deploy_path: $APP_DIR/build/ios/ipa
