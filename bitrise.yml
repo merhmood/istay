@@ -1,0 +1,76 @@
+format_version: "13"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+# Two Flutter apps live in one repo (guest_app/, host_app/), each with its own
+# workflow below. staynaija_shared is pulled in via a local path dependency
+# (`path: ../staynaija_shared`), which resolves correctly as-is once the
+# whole repo is checked out - no extra step needed for it.
+#
+# Both workflows build a signed .ipa and upload it to Bitrise.io as an
+# installable artifact (development/ad-hoc distribution) - not the App Store -
+# so it can go straight onto a registered test iPhone without TestFlight.
+# See ios/ExportOptions.plist in each app for the one-time setup this needs.
+
+workflows:
+  deploy_guest_ios:
+    envs:
+      - APP_DIR: guest_app
+    steps:
+      - git-clone@8: {}
+      - flutter-installer@0:
+          inputs:
+            - version: stable
+      - script@1:
+          title: flutter pub get
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter pub get
+      - certificate-and-profile-installer@1: {}
+      - script@1:
+          title: flutter build ipa
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $APP_DIR/build/ios/ipa
+
+  deploy_host_ios:
+    envs:
+      - APP_DIR: host_app
+    steps:
+      - git-clone@8: {}
+      - flutter-installer@0:
+          inputs:
+            - version: stable
+      - script@1:
+          title: flutter pub get
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter pub get
+      - certificate-and-profile-installer@1: {}
+      - script@1:
+          title: flutter build ipa
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $APP_DIR/build/ios/ipa
+
+meta:
+  bitrise.io:
+    stack: osx-xcode-15.4.x
+    machine_type_id: g2-m1.4core
