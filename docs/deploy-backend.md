@@ -34,7 +34,8 @@ first build has to happen before the app exists on Bunny's side:
    app to roll out yet. Ignore that failure for now.
 2. GitHub Container Registry packages are private by default. Either make
    `staynaija-backend` public (package Settings → Change visibility), or note
-   the package so you can connect it as a private registry in step 2 - you'll
+   the package so you can connect it as a private registry when picking an
+   image in step 4 - you'll
    need a GitHub PAT with `read:packages` scope either way if you keep it
    private.
 
@@ -60,7 +61,25 @@ Run `alembic upgrade head` against it once yourself before the first deploy
 local venv/deps), or just let the container do it - the Dockerfile's `CMD`
 runs migrations on every start regardless.
 
-## 3. Create the app on Magic Containers
+## 3. Create a Bunny Storage Zone
+
+Listing photos and verification documents (ID + selfie) are uploaded here
+instead of container disk - Magic Containers' local disk doesn't survive a
+redeploy, and wouldn't be shared across instances if `api` is ever scaled
+past one (same caveat as the sibling-Postgres approach this doc used to
+describe). See `app/services/storage.py`.
+
+1. Bunny dashboard → Storage → Add Storage Zone. Any region is fine - pick
+   one close to your users if it matters, and note it (blank if you picked
+   the default) for `BUNNY_STORAGE_REGION`.
+2. On that zone's FTP & API Access page, copy the **Password** - this is
+   `BUNNY_STORAGE_ACCESS_KEY` (not your Bunny account API key).
+3. Connect a **Pull Zone** to the storage zone (the zone's own setup flow
+   offers this) so files are actually fetchable. Note the Pull Zone's
+   `*.b-cdn.net` hostname, or map a custom domain to it - this is
+   `BUNNY_STORAGE_PULL_ZONE_HOST`.
+
+## 4. Create the app on Magic Containers
 
 In the Bunny dashboard, Magic Containers → New App, add **one container**:
 
@@ -70,7 +89,8 @@ In the Bunny dashboard, Magic Containers → New App, add **one container**:
 |---|---|
 | Image | the GHCR image from step 1 |
 | Port | `8000`, endpoint type CDN (this is a normal HTTP API) |
-| Volume | mount path `/app/uploads` - without this, every rolling update wipes listing photos and verification documents (container disk is ephemeral) |
+
+No volume needed - uploads go to Bunny Storage from step 3, not container disk.
 
 Environment variables for `api` (see `backend/.env.example` for the full
 list) - the ones that matter most to get right:
@@ -81,27 +101,28 @@ list) - the ones that matter most to get right:
 | `JWT_SECRET` | a real long random value - never the `change-me-...` placeholder |
 | `PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY` | your real test or live Paystack keys |
 | `ENV` | `production` |
-| `PUBLIC_BASE_URL` | fill in *after* deploying once you know the app's Bunny-assigned URL (or your custom domain) - this is what makes uploaded-photo URLs resolve correctly, see `_save_upload` in `app/api/v1/users.py` |
+| `PUBLIC_BASE_URL` | fill in *after* deploying once you know the app's Bunny-assigned URL (or your custom domain) - only used if Bunny Storage isn't configured, see `app/services/storage.py` |
 | `CORS_ORIGINS` | your real app origins once known, instead of `*` |
+| `BUNNY_STORAGE_ZONE` / `BUNNY_STORAGE_ACCESS_KEY` / `BUNNY_STORAGE_REGION` / `BUNNY_STORAGE_PULL_ZONE_HOST` | from step 3 |
 
 Deploy the app. Note the **App ID** Bunny assigns it (shown in the app's
 dashboard URL/settings) and the container name you gave the API container
 (the workflow assumes `api` - rename the step's `container:` input to match
 if you called it something else).
 
-## 4. Wire up GitHub Actions
+## 5. Wire up GitHub Actions
 
 In the GitHub repo (`Stay-Naijaa/staynaija`) → Settings → Secrets and
 variables → Actions:
 
 - **Secret** `BUNNY_API_KEY` - your Bunny account API key (Account Settings →
   API, master account only).
-- **Variable** `BUNNY_APP_ID` - the App ID from step 3.
+- **Variable** `BUNNY_APP_ID` - the App ID from step 4.
 
 Push to `backend/**` again (or re-run the failed workflow run from step 1) -
 this time the rollout step will find the app and update it.
 
-## 5. Point the mobile apps at it
+## 6. Point the mobile apps at it
 
 Both apps default to `http://localhost:8000` (`ApiConfig.baseUrl` in
 `staynaija_shared/lib/core/api/api_config.dart`), which only works during
@@ -111,5 +132,5 @@ local device testing via `adb reverse`. Release builds need:
 flutter build apk --dart-define=API_BASE_URL=https://<your-production-url>
 ```
 
-(or the equivalent for `flutter build ipa`), once `PUBLIC_BASE_URL` in step 2
-is filled in to match.
+(or the equivalent for `flutter build ipa`), once the app's real URL is known
+from step 4.

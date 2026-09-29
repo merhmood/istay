@@ -30,15 +30,38 @@ class Settings(BaseSettings):
 
     cors_origins: str = "*"
     upload_dir: str = "uploads"
-    # Prefixed onto every uploaded file's URL (see api/v1/users.py::_save_upload)
-    # so a listing photo or verification document is a real fetchable URL, not
-    # a host-less path like "/uploads/...". Matches the mobile clients' own
-    # ApiConfig.baseUrl default - both point at the same backend.
+    # Prefixed onto every uploaded file's URL (see services/storage.py) so a
+    # listing photo or verification document is a real fetchable URL, not a
+    # host-less path like "/uploads/...". Matches the mobile clients' own
+    # ApiConfig.baseUrl default - both point at the same backend. Only used
+    # for the local-disk storage fallback - see bunny_storage_configured.
     public_base_url: str = "http://localhost:8000"
+
+    # Bunny Storage + a CDN pull zone in front, for listing photos and
+    # verification documents - see services/storage.py. Left empty by
+    # default: local dev writes to disk under `upload_dir` instead, so
+    # running the app never requires a Bunny account. Production sets all
+    # three, since local disk on Magic Containers doesn't survive a redeploy
+    # and isn't shared across instances if it's ever scaled past one - see
+    # docs/deploy-backend.md.
+    bunny_storage_zone: str = ""
+    bunny_storage_access_key: str = ""
+    # The zone's storage.bunnycdn.com by default; a region code (e.g. "ny")
+    # prefixes that instead for a region-pinned storage zone - see
+    # https://docs.bunny.net/docs/storage-regions.
+    bunny_storage_region: str = ""
+    # The Pull Zone hostname (or mapped custom domain) files are actually
+    # fetched back from - never the storage endpoint itself, which isn't
+    # meant to serve traffic directly.
+    bunny_storage_pull_zone_host: str = ""
 
     @property
     def is_dev(self) -> bool:
         return self.env.lower() == "dev"
+
+    @property
+    def bunny_storage_configured(self) -> bool:
+        return bool(self.bunny_storage_zone and self.bunny_storage_access_key and self.bunny_storage_pull_zone_host)
 
     @property
     def cors_origin_list(self) -> list[str]:

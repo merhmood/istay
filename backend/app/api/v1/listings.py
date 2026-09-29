@@ -8,7 +8,6 @@ from sqlalchemy import String, case, cast, func, select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.v1.users import _save_upload
 from app.core.nigeria_states import NIGERIA_STATES
 from app.core.security import get_current_host, get_current_user, get_optional_user
 from app.core.stay_types import LEGACY_ALIASES, STAY_TYPES, normalize_stay_type
@@ -21,6 +20,7 @@ from app.models.review import Review
 from app.models.user import User
 from app.services.fuzzy import fuzzy_matches
 from app.services.geo import haversine_km
+from app.services.storage import save_upload
 from app.services.recommendations import (
     CF_BLEND,
     MAX_RECOMMENDATION_DISTANCE_KM,
@@ -737,7 +737,7 @@ async def upload_listing_photo(
     db: AsyncSession = Depends(get_db),
 ) -> ListingPhoto:
     listing = await _get_owned_listing(listing_id, current_user, db)
-    url = _save_upload(file, "listing-photos")
+    url = await save_upload(file, "listing-photos")
     photo = ListingPhoto(listing_id=listing.id, url=url, position=len(listing.photos))
     db.add(photo)
     await db.commit()
