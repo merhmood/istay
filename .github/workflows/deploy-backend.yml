@@ -27,12 +27,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Docker/GHCR repository paths must be lowercase; github.repository
+      # isn't (the org is "Stay-Naijaa") - a straight interpolation of it into
+      # the tag below fails at build time with "repository name must be
+      # lowercase". GitHub Actions expressions have no built-in lower(), so
+      # do it in bash instead.
+      - name: Compute lowercase image repository
+        run: echo "IMAGE_REPO=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-backend" >> "$GITHUB_ENV"
+
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/${{ github.repository }}-backend:${{ github.sha }}
+          tags: ${{ env.IMAGE_REPO }}:${{ github.sha }}
 
       # Prerequisite: an app must already exist on Magic Containers (created
       # once, by hand, via the Bunny dashboard) before this can roll it -
