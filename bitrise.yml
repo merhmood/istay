@@ -23,6 +23,12 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 # always beat the Secret instead of falling back to it. The script below
 # defaults to localhost with a plain bash `${VAR:-default}` instead, which
 # doesn't participate in that ordering.
+#
+# Stack/machine: the app-level default at the bottom (osx-xcode) is needed
+# for the two iOS workflows only - Xcode requires a Mac, which Bitrise gates
+# behind a paid plan regardless of this file. The two Android workflows each
+# override it to a Linux stack (see their own `meta:` blocks) since they
+# don't touch Xcode at all, and that Linux tier runs on the free/trial plan.
 
 workflows:
   deploy_guest_ios:
@@ -101,6 +107,13 @@ workflows:
   deploy_guest_android:
     envs:
       - APP_DIR: guest_app
+    # Overrides the app-level macOS/Xcode stack at the bottom of this file -
+    # Android needs neither Xcode nor a Mac, and Mac machines are gated
+    # behind a paid Bitrise plan. This Linux stack runs on the free/trial tier.
+    meta:
+      bitrise.io:
+        stack: linux-docker-android-22.04
+        machine_type_id: standard
     steps:
       - git-clone@8: {}
       - flutter-installer@0:
@@ -131,6 +144,11 @@ workflows:
   deploy_host_android:
     envs:
       - APP_DIR: host_app
+    # See deploy_guest_android above - same Linux stack override, same reason.
+    meta:
+      bitrise.io:
+        stack: linux-docker-android-22.04
+        machine_type_id: standard
     steps:
       - git-clone@8: {}
       - flutter-installer@0:
