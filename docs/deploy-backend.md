@@ -4,13 +4,23 @@ One-time manual setup (needs your Bunny account and GitHub repo access - not
 something that can be scripted from here), then every push to `backend/**`
 on `main` rolls out automatically via `.github/workflows/deploy-backend.yml`.
 
-## Why two containers
+## Database: Neon, not a sibling container
 
 Magic Containers has no managed Postgres yet (Bunny Database, their new
-managed-SQL product, is libSQL-only in preview). Instead you run Postgres as
-a second container in the same app - same pattern as `docker-compose.yml`
-locally, just both containers live in one Bunny "app" (pod) and talk over
-`127.0.0.1` instead of a compose network.
+managed-SQL product, is libSQL-only in preview) - the original version of
+this doc ran Postgres as a second container in the same app for that reason.
+Since the database is Neon instead, only the `api` container runs on Magic
+Containers at all; Neon is reached over the public internet like any other
+external service.
+
+One thing this needs that a same-pod Postgres wouldn't: Neon's connection
+string comes with `sslmode=require&channel_binding=require`, which are
+libpq-style params asyncpg doesn't understand - passed straight through as
+unrecognised connect kwargs, asyncpg rejects the connection outright. Both
+`app/db/session.py` and `alembic/env.py` now strip those and translate them
+to the `ssl` connect kwarg asyncpg actually wants
+(`prepare_database_url()`), so the same `DATABASE_URL` works whether it's
+Neon's or the plain local one - nothing further to configure for this part.
 
 ## 1. Get an initial image into GHCR
 
@@ -28,22 +38,31 @@ first build has to happen before the app exists on Bunny's side:
    need a GitHub PAT with `read:packages` scope either way if you keep it
    private.
 
-## 2. Create the app on Magic Containers
+## 2. Create a Neon project
 
-In the Bunny dashboard, Magic Containers → New App, add **two containers**:
+In Neon, create a project/database and grab its connection string from the
+dashboard - it looks like:
 
-### `db` (Postgres)
+```
+postgresql://neondb_owner:<password>@ep-xxxx-xxxx.<region>.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+```
 
-| Setting | Value |
-|---|---|
-| Image | `postgres:16-alpine` (matches local dev) |
-| Port | `5432` |
-| Env `POSTGRES_USER` | `staynaija` |
-| Env `POSTGRES_PASSWORD` | a real generated password - **not** `staynaija` |
-| Env `POSTGRES_DB` | `staynaija` |
-| Env `PGDATA` | `/var/lib/postgresql/data/pgdata` |
-| Volume | name `postgres-data`, mount path `/var/lib/postgresql/data` |
-| Region | single region, single instance - Postgres here has no replication |
+Two edits before it's usable as `DATABASE_URL` here:
+
+1. Change the scheme from `postgresql://` to `postgresql+asyncpg://` - this
+   codebase's SQLAlchemy setup needs the driver named explicitly.
+2. Leave the `sslmode`/`channel_binding` params in place - `prepare_database_url()`
+   strips and translates them at startup, so the connection string doesn't
+   need hand-editing beyond the scheme change.
+
+Run `alembic upgrade head` against it once yourself before the first deploy
+(`DATABASE_URL=<neon url> alembic upgrade head` from `backend/`, with your
+local venv/deps), or just let the container do it - the Dockerfile's `CMD`
+runs migrations on every start regardless.
+
+## 3. Create the app on Magic Containers
+
+In the Bunny dashboard, Magic Containers → New App, add **one container**:
 
 ### `api` (this backend)
 
@@ -58,7 +77,7 @@ list) - the ones that matter most to get right:
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://staynaija:<the db password>@127.0.0.1:5432/staynaija` - note the `+asyncpg` driver suffix; Bunny's generic Postgres example omits it, but this codebase's SQLAlchemy setup requires it |
+| `DATABASE_URL` | your Neon connection string from step 2, with `+asyncpg` added to the scheme |
 | `JWT_SECRET` | a real long random value - never the `change-me-...` placeholder |
 | `PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY` | your real test or live Paystack keys |
 | `ENV` | `production` |
@@ -70,19 +89,19 @@ dashboard URL/settings) and the container name you gave the API container
 (the workflow assumes `api` - rename the step's `container:` input to match
 if you called it something else).
 
-## 3. Wire up GitHub Actions
+## 4. Wire up GitHub Actions
 
 In the GitHub repo (`Stay-Naijaa/staynaija`) → Settings → Secrets and
 variables → Actions:
 
 - **Secret** `BUNNY_API_KEY` - your Bunny account API key (Account Settings →
   API, master account only).
-- **Variable** `BUNNY_APP_ID` - the App ID from step 2.
+- **Variable** `BUNNY_APP_ID` - the App ID from step 3.
 
 Push to `backend/**` again (or re-run the failed workflow run from step 1) -
 this time the rollout step will find the app and update it.
 
-## 4. Point the mobile apps at it
+## 5. Point the mobile apps at it
 
 Both apps default to `http://localhost:8000` (`ApiConfig.baseUrl` in
 `staynaija_shared/lib/core/api/api_config.dart`), which only works during

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:heroicons/heroicons.dart';
 import 'package:staynaija_shared/core/theme/bold_icons.dart';
 
 import 'package:staynaija_shared/core/theme/app_theme.dart';
 import 'package:staynaija_shared/core/widgets/app_image.dart';
 import 'package:staynaija_shared/models/listing.dart';
+import 'package:staynaija/core/widgets/animated_favorite_icon.dart';
 import 'package:staynaija/core/widgets/sign_in_prompt.dart';
 import 'package:staynaija/features/discovery/favorites_provider.dart';
 
@@ -161,12 +161,7 @@ class _RecommendedListingCardState extends ConsumerState<RecommendedListingCard>
         decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [
           BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6),
         ]),
-        child: HeroIcon(
-          HeroIcons.heart,
-          style: isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-          size: 16,
-          color: isFavorite ? AppColors.error : AppColors.textSecondary,
-        ),
+        child: AnimatedFavoriteIcon(isFavorite: isFavorite, size: 16),
       ),
     );
   }

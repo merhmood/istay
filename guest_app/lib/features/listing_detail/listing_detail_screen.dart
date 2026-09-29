@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:heroicons/heroicons.dart';
 import 'package:staynaija_shared/core/theme/bold_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +11,7 @@ import 'package:staynaija_shared/core/widgets/app_image.dart';
 import 'package:staynaija_shared/core/widgets/app_refresh.dart';
 import 'package:staynaija_shared/auth/auth_provider.dart';
 import 'package:staynaija/features/discovery/discovery_provider.dart';
+import 'package:staynaija/core/widgets/animated_favorite_icon.dart';
 import 'package:staynaija/core/widgets/sign_in_prompt.dart';
 import 'package:staynaija/features/discovery/favorites_provider.dart';
 import 'package:staynaija/features/discovery/services/external_maps.dart';
@@ -259,12 +259,7 @@ class _PhotoHeaderState extends ConsumerState<_PhotoHeader> {
               children: [
                 _CircleButton(icon: LucideIcons.arrowLeft, onTap: () => context.pop()),
                 _CircleButton(
-                  child: HeroIcon(
-                    HeroIcons.heart,
-                    style: isFavorite ? HeroIconStyle.solid : HeroIconStyle.outline,
-                    color: isFavorite ? AppColors.error : AppColors.textPrimary,
-                    size: 20,
-                  ),
+                  child: AnimatedFavoriteIcon(isFavorite: isFavorite, inactiveColor: AppColors.textPrimary, size: 20),
                   onTap: () {
                     if (isSignedOut(ref)) {
                       promptSignIn(

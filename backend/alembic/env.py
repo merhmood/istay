@@ -5,7 +5,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import settings
-from app.db.session import Base
+from app.db.session import Base, prepare_database_url
 from app.models import *  # noqa: F401,F403  (ensures all models are registered on Base.metadata)
 
 config = context.config
@@ -33,7 +33,11 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
-    connectable = create_async_engine(settings.database_url)
+    # Same asyncpg-vs-sslmode translation app/db/session.py needs for a
+    # managed Postgres URL (Neon, etc.) - this engine is built separately
+    # from the app's own, so it doesn't get that fix for free.
+    url, connect_args = prepare_database_url(settings.database_url)
+    connectable = create_async_engine(url, connect_args=connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
