@@ -50,5 +50,5 @@ jobs:
         with:
           app_id: ${{ vars.BUNNY_APP_ID }}
           api_key: ${{ secrets.BUNNY_API_KEY }}
-          container: api
+          container: staynaija-backend
           image_tag: "${{ github.sha }}"

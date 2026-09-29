@@ -9,7 +9,7 @@ on `main` rolls out automatically via `.github/workflows/deploy-backend.yml`.
 Magic Containers has no managed Postgres yet (Bunny Database, their new
 managed-SQL product, is libSQL-only in preview) - the original version of
 this doc ran Postgres as a second container in the same app for that reason.
-Since the database is Neon instead, only the `api` container runs on Magic
+Since the database is Neon instead, only the `staynaija-backend` container runs on Magic
 Containers at all; Neon is reached over the public internet like any other
 external service.
 
@@ -65,7 +65,7 @@ runs migrations on every start regardless.
 
 Listing photos and verification documents (ID + selfie) are uploaded here
 instead of container disk - Magic Containers' local disk doesn't survive a
-redeploy, and wouldn't be shared across instances if `api` is ever scaled
+redeploy, and wouldn't be shared across instances if `staynaija-backend` is ever scaled
 past one (same caveat as the sibling-Postgres approach this doc used to
 describe). See `app/services/storage.py`.
 
@@ -83,7 +83,7 @@ describe). See `app/services/storage.py`.
 
 In the Bunny dashboard, Magic Containers → New App, add **one container**:
 
-### `api` (this backend)
+### `staynaija-backend` (this backend)
 
 | Setting | Value |
 |---|---|
@@ -92,7 +92,7 @@ In the Bunny dashboard, Magic Containers → New App, add **one container**:
 
 No volume needed - uploads go to Bunny Storage from step 3, not container disk.
 
-Environment variables for `api` (see `backend/.env.example` for the full
+Environment variables for `staynaija-backend` (see `backend/.env.example` for the full
 list) - the ones that matter most to get right:
 
 | Variable | Value |
@@ -107,7 +107,7 @@ list) - the ones that matter most to get right:
 
 Deploy the app. Note the **App ID** Bunny assigns it (shown in the app's
 dashboard URL/settings) and the container name you gave the API container
-(the workflow assumes `api` - rename the step's `container:` input to match
+(the workflow assumes `staynaija-backend` - rename the step's `container:` input to match
 if you called it something else).
 
 ## 5. Wire up GitHub Actions
