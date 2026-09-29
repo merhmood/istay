@@ -8,17 +8,35 @@ from app.core.config import settings
 
 
 def prepare_database_url(raw_url: str) -> tuple[str, dict]:
-    """Strip query params asyncpg doesn't understand, translating them to the
-    connect_args it does.
+    """Normalise a possibly-copy-pasted connection string into one this
+    project's async setup can actually use.
 
-    A managed Postgres connection string (Neon's, for one) comes with
-    `sslmode=require&channel_binding=require` - libpq-style params meant for
-    psycopg, not asyncpg. asyncpg only recognises an `ssl` *keyword argument*;
-    left in the URL's query string, these get forwarded as unrecognised
-    connect kwargs and asyncpg rejects the connection outright. Local dev's
-    plain compose URL carries no such params, so this is a no-op there.
+    Two independent gotchas, both real ones a managed Postgres provider's
+    dashboard will hand you verbatim if you paste the string as given:
+
+    * No driver named in the scheme (`postgresql://...`, or Heroku/Neon's
+      older `postgres://...`) - SQLAlchemy then defaults to the sync
+      `psycopg2` dialect, which isn't installed (this project only installs
+      `asyncpg`), and fails with `ModuleNotFoundError: No module named
+      'psycopg2'` - a confusing error for what's really just a missing
+      `+asyncpg` in the scheme. Upgraded automatically here rather than left
+      as a step someone can forget mid copy-paste.
+    * `sslmode=require&channel_binding=require` - libpq-style query params
+      meant for psycopg, not asyncpg. asyncpg only recognises an `ssl`
+      *keyword argument*; left in the URL's query string, these get
+      forwarded as unrecognised connect kwargs and asyncpg rejects the
+      connection outright.
+
+    Local dev's plain compose URL already has neither issue, so both of
+    these are no-ops there.
     """
     parts = urlsplit(raw_url)
+
+    scheme = parts.scheme
+    if scheme in ("postgresql", "postgres"):
+        scheme = "postgresql+asyncpg"
+    parts = parts._replace(scheme=scheme)
+
     query = dict(parse_qsl(parts.query))
     wants_ssl = query.pop("sslmode", None) not in (None, "disable")
     query.pop("channel_binding", None)
