@@ -1,20 +1,21 @@
 format_version: "13"
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
-# Two Flutter apps live in one repo (guest_app/, host_app/), each with its own
-# workflow below. staynaija_shared is pulled in via a local path dependency
-# (`path: ../staynaija_shared`), which resolves correctly as-is once the
-# whole repo is checked out - no extra step needed for it.
+# Two Flutter apps live in one repo (guest_app/, host_app/), each with an iOS
+# and an Android workflow below (four total). staynaija_shared is pulled in
+# via a local path dependency (`path: ../staynaija_shared`), which resolves
+# correctly as-is once the whole repo is checked out - no extra step needed
+# for it.
 #
-# Both workflows build a signed .ipa and upload it to Bitrise.io as an
-# installable artifact (development/ad-hoc distribution) - not the App Store -
-# so it can go straight onto a registered test iPhone without TestFlight.
-# See ios/ExportOptions.plist in each app for the one-time setup this needs.
+# The iOS workflows build a signed .ipa; Android builds a release .apk. Both
+# upload to Bitrise.io as an installable artifact (development/ad-hoc
+# distribution for iOS, direct install for Android) - neither goes through
+# the App Store/Play Store, so either lands straight on a test device. See
+# ios/ExportOptions.plist in each app for the one-time iOS signing setup.
 #
 # API_BASE_URL is read from a Bitrise Secret (Workflow Editor -> Secrets tab
 # on this app - NOT the GitHub repo's secrets, which Bitrise has no access
-# to) and passed through as a Dart define, the same mechanism
-# `flutter build apk --dart-define=API_BASE_URL=...` uses for Android - see
+# to) and passed through as a Dart define on all four workflows - see
 # ApiConfig.baseUrl in staynaija_shared.
 #
 # Deliberately NOT declared under a workflow `envs:` block here: Bitrise
@@ -89,6 +90,73 @@ workflows:
       - deploy-to-bitrise-io@2:
           inputs:
             - deploy_path: $APP_DIR/build/ios/ipa
+
+  # Android release APKs, same API_BASE_URL Secret as the iOS workflows above.
+  # No code-signing step needed here the way iOS needs certificates: both
+  # apps' android/app/build.gradle.kts still point the release build type at
+  # the debug signing config (see the TODO already there) - same as every
+  # Android build this project has installed for testing so far, just run on
+  # Bitrise instead of locally. Swap that gradle config for a real release
+  # keystore before this ever needs to go to the Play Store.
+  deploy_guest_android:
+    envs:
+      - APP_DIR: guest_app
+    steps:
+      - git-clone@8: {}
+      - flutter-installer@0:
+          inputs:
+            - version: stable
+      - script@1:
+          title: flutter pub get
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter pub get
+      - script@1:
+          title: flutter build apk
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                : "${API_BASE_URL:=http://localhost:8000}"
+                echo "Building against API_BASE_URL=$API_BASE_URL"
+                flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $APP_DIR/build/app/outputs/flutter-apk
+
+  deploy_host_android:
+    envs:
+      - APP_DIR: host_app
+    steps:
+      - git-clone@8: {}
+      - flutter-installer@0:
+          inputs:
+            - version: stable
+      - script@1:
+          title: flutter pub get
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                flutter pub get
+      - script@1:
+          title: flutter build apk
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euo pipefail
+                cd "$APP_DIR"
+                : "${API_BASE_URL:=http://localhost:8000}"
+                echo "Building against API_BASE_URL=$API_BASE_URL"
+                flutter build apk --release --dart-define=API_BASE_URL="$API_BASE_URL"
+      - deploy-to-bitrise-io@2:
+          inputs:
+            - deploy_path: $APP_DIR/build/app/outputs/flutter-apk
 
 meta:
   bitrise.io:

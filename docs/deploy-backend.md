@@ -126,11 +126,17 @@ this time the rollout step will find the app and update it.
 
 Both apps default to `http://localhost:8000` (`ApiConfig.baseUrl` in
 `staynaija_shared/lib/core/api/api_config.dart`), which only works during
-local device testing via `adb reverse`. Release builds need:
+local device testing via `adb reverse`. A release build needs the real URL
+from step 4 instead, passed as a Dart define - two ways to do that:
 
-```
-flutter build apk --dart-define=API_BASE_URL=https://<your-production-url>
-```
-
-(or the equivalent for `flutter build ipa`), once the app's real URL is known
-from step 4.
+- **Bitrise** (see `bitrise.yml`, four workflows: `deploy_guest_ios`,
+  `deploy_host_ios`, `deploy_guest_android`, `deploy_host_android`) - set
+  `API_BASE_URL` once as a Secret in the Bitrise dashboard and every workflow
+  picks it up automatically.
+- **Manually**, for a one-off local build:
+  ```
+  flutter build apk --dart-define=API_BASE_URL=https://<your-production-url>
+  ```
+  (or the equivalent `flutter build ipa` flags, plus
+  `--export-options-plist=ios/ExportOptions.plist` - see that file for the
+  signing setup it needs).
