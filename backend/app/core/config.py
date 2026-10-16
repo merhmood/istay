@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
 
-    paystack_secret_key: str = "sk_test_replace_me"
-    paystack_public_key: str = "pk_test_replace_me"
+    flutterwave_secret_key: str = "FLWSECK_TEST-replace-me"
+    flutterwave_public_key: str = "FLWPUBK_TEST-replace-me"
 
     # Social sign-in. Comma-separated because a mobile app typically registers
     # a different OAuth client per platform (Android/iOS/web) that must all be

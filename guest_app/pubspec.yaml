@@ -65,9 +65,9 @@ dependencies:
   # Calendar for availability display
   table_calendar: any
 
-  # Paystack checkout is opened as a WebView pointed at the authorization_url the
-  # backend returns from Paystack's real Initialize Transaction API - this avoids
-  # depending on a third-party Paystack Flutter SDK that may lag behind current
+  # Flutterwave checkout is opened as a WebView pointed at the checkout_url the
+  # backend returns from Flutterwave's real Initialize Transaction API - this avoids
+  # depending on a third-party Flutterwave Flutter SDK that may lag behind current
   # Flutter/Dart SDK versions.
   webview_flutter: any
 
@@ -85,6 +85,8 @@ dependencies:
   android_intent_plus: ^5.3.0
   cached_network_image: ^4.0.0
   google_maps_flutter: ^2.18.1
+  # Native share sheet, for the listing detail screen's share button.
+  share_plus: ^13.3.1
 
 dev_dependencies:
   flutter_test:

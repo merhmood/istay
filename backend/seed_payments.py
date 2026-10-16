@@ -1,5 +1,5 @@
 """Seed demo bookings + payments for the guest account, so the Payments and
-Escrow screens have something to render without going through Paystack checkout.
+Escrow screens have something to render without going through Flutterwave checkout.
 
 One booking is still in escrow (payout releases in the future) and one has
 already been released, which exercises both states.
@@ -75,7 +75,7 @@ async def seed_payments() -> None:
             await db.flush()
 
             reference = f"stn_demo_{uuid.uuid4().hex[:14]}"
-            booking.paystack_reference = reference
+            booking.payment_reference = reference
             db.add(
                 Payment(
                     booking_id=booking.id,

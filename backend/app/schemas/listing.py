@@ -100,6 +100,16 @@ class ListingOut(ListingBase):
     host_id: uuid.UUID
     is_published: bool
     photos: list[ListingPhotoOut] = []
+    # Computed, not stored - see get_listing() in api/v1/listings.py. Defaults
+    # here are only for other code paths that build a ListingOut without
+    # going through that endpoint (e.g. host's own listing list); they are
+    # not meaningful values, just a safe fallback.
+    host_name: str = ""
+    host_avatar_url: str | None = None
+    host_review_count: int = 0
+    host_rating: float | None = None
+    host_years_hosting: int = 0
+    is_guest_favourite: bool = False
 
 
 class AvailabilityBlockCreate(BaseModel):

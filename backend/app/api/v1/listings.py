@@ -1,7 +1,7 @@
 import re
 import uuid
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import String, case, cast, func, select, union_all
@@ -28,14 +28,13 @@ from app.services.recommendations import (
     WEIGHT_DIRECTIONS,
     WEIGHT_FAVORITE,
     WEIGHT_MAP_VIEW,
-    WEIGHT_PROXIMITY,
     WEIGHT_VIEW,
     Interaction,
     build_taste_profile,
     content_score,
     item_item_scores,
     popularity_score,
-    proximity_score,
+    proximity_band,
     repeat_weight,
 )
 from app.schemas.listing import (
@@ -453,15 +452,16 @@ async def recommended_listings(
     )
     review_stats = {str(row[0]): (int(row[1]), float(row[2] or 0)) for row in review_rows.all()}
 
-    # 4. Cold start - no history, or signed out entirely.
+    # 4. Cold start - no history, or signed out entirely. Closest ring first,
+    #    quality within it - see proximity_band's docstring for why this is a
+    #    sort key rather than another term blended into one score.
     if not history:
-        def cold_start_key(listing: Listing) -> float:
+        def cold_start_key(listing: Listing) -> tuple[int, float]:
+            band = proximity_band(distance_by_id.get(str(listing.id))) if distance_by_id else 0
             score = popularity_score(listing, review_stats)
-            if distance_by_id:
-                score += WEIGHT_PROXIMITY * proximity_score(distance_by_id.get(str(listing.id), MAX_RECOMMENDATION_DISTANCE_KM))
-            return score
+            return (band, -score)
 
-        ranked = sorted(candidates, key=cold_start_key, reverse=True)
+        ranked = sorted(candidates, key=cold_start_key)
         return ranked[:limit]
 
     profile = build_taste_profile(history)
@@ -497,19 +497,20 @@ async def recommended_listings(
     cf_scores = item_item_scores(interactions, seed_listing_ids)
     cf_weight = CF_BLEND if cf_scores else 0.0
 
-    scored: list[tuple[float, Listing]] = []
+    # Closest ring first, taste/quality as the tie-breaker within it - same
+    # reasoning as the cold-start branch above.
+    scored: list[tuple[int, float, Listing]] = []
     for listing in candidates:
         content, _reason = content_score(listing, profile)
         collaborative = cf_scores.get(str(listing.id), 0.0)
         blended = (1 - cf_weight) * content + cf_weight * collaborative
         # Small quality nudge so near-ties resolve toward better-reviewed places.
         blended += 0.08 * popularity_score(listing, review_stats)
-        if distance_by_id:
-            blended += WEIGHT_PROXIMITY * proximity_score(distance_by_id.get(str(listing.id), MAX_RECOMMENDATION_DISTANCE_KM))
-        scored.append((blended, listing))
+        band = proximity_band(distance_by_id.get(str(listing.id))) if distance_by_id else 0
+        scored.append((band, blended, listing))
 
-    scored.sort(key=lambda pair: pair[0], reverse=True)
-    return [listing for _score, listing in scored[:limit]]
+    scored.sort(key=lambda triple: (triple[0], -triple[1]))
+    return [listing for _band, _score, listing in scored[:limit]]
 
 
 @router.get("/mine", response_model=list[ListingOut])
@@ -670,14 +671,85 @@ async def _monthly_booking_trend(
     ]
 
 
+# Below this review count, a listing's average is too noisy to call out as a
+# "favourite" (one 5-star review would otherwise instantly qualify) or to
+# rank fairly against listings with a real review history.
+_MIN_REVIEWS_FOR_BADGE = 3
+# How exclusive the badge is - top 10% of listings that clear the review-count
+# bar above.
+_GUEST_FAVOURITE_PERCENTILE = 0.10
+
+# Same per-review average used by the recommendation feed (app/services/
+# recommendations.py's review_stats query) - duplicated rather than imported
+# since that module scores the discovery *feed*, a different concern from a
+# single listing's own detail stats, and re-exporting a bare SQL expression
+# across that boundary isn't worth it for one line.
+_AVG_RATING_EXPR = (Review.cleanliness + Review.communication + Review.accuracy + Review.location_rating + Review.value) / 5.0
+
+
 @router.get("/{listing_id}", response_model=ListingOut)
-async def get_listing(listing_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> Listing:
-    query = select(Listing).options(selectinload(Listing.photos)).where(Listing.id == listing_id)
+async def get_listing(listing_id: uuid.UUID, db: AsyncSession = Depends(get_db)) -> ListingOut:
+    query = (
+        select(Listing)
+        .options(selectinload(Listing.photos), selectinload(Listing.host))
+        .where(Listing.id == listing_id)
+    )
     result = await db.execute(query)
     listing = result.scalar_one_or_none()
     if not listing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
-    return listing
+
+    # Host stats: aggregated across every listing this host owns, not just
+    # the one being viewed - that's what "460 Reviews Β· 4.97 Rating" means on
+    # a host's profile.
+    host_stats_row = (
+        await db.execute(
+            select(func.count(Review.id), func.avg(_AVG_RATING_EXPR))
+            .select_from(Review)
+            .join(Listing, Listing.id == Review.listing_id)
+            .where(Listing.host_id == listing.host_id)
+        )
+    ).one()
+    host_review_count = int(host_stats_row[0] or 0)
+    host_rating = float(host_stats_row[1]) if host_stats_row[1] is not None else None
+    host_years_hosting = max(0, (datetime.now(timezone.utc) - listing.host.created_at).days // 365)
+
+    # Guest favourite: this listing's own average has to clear the review-
+    # count bar, then rank in the top percentile among every other published
+    # listing that also clears it.
+    own_stats_row = (
+        await db.execute(
+            select(func.count(Review.id), func.avg(_AVG_RATING_EXPR)).where(Review.listing_id == listing.id)
+        )
+    ).one()
+    own_review_count = int(own_stats_row[0] or 0)
+    own_rating = float(own_stats_row[1]) if own_stats_row[1] is not None else None
+
+    is_guest_favourite = False
+    if own_review_count >= _MIN_REVIEWS_FOR_BADGE and own_rating is not None:
+        eligible_ratings_rows = await db.execute(
+            select(func.avg(_AVG_RATING_EXPR))
+            .select_from(Review)
+            .join(Listing, Listing.id == Review.listing_id)
+            .where(Listing.is_published.is_(True))
+            .group_by(Review.listing_id)
+            .having(func.count(Review.id) >= _MIN_REVIEWS_FOR_BADGE)
+        )
+        eligible_ratings = sorted((float(row[0]) for row in eligible_ratings_rows.all()), reverse=True)
+        if eligible_ratings:
+            rank = sum(1 for rating in eligible_ratings if rating >= own_rating)
+            is_guest_favourite = (rank / len(eligible_ratings)) <= _GUEST_FAVOURITE_PERCENTILE
+
+    return ListingOut.model_validate(listing).model_copy(
+        update={
+            "host_name": listing.host.full_name,
+            "host_avatar_url": listing.host.avatar_url,
+            "host_review_count": host_review_count,
+            "host_rating": host_rating,
+            "host_years_hosting": host_years_hosting,
+            "is_guest_favourite": is_guest_favourite,
+        }
+    )
 
 
 @router.post("", response_model=ListingOut, status_code=status.HTTP_201_CREATED)

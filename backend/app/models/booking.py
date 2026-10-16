@@ -49,7 +49,7 @@ class Booking(UUIDMixin, TimestampMixin, Base):
     # automation is built yet - this is the timestamp a future payout job would check.
     payout_release_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    paystack_reference: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
+    payment_reference: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
 
     listing = relationship("Listing")
     guest = relationship("User", foreign_keys=[guest_id])

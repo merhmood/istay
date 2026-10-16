@@ -7,8 +7,11 @@ class ListingPhoto {
 
   ListingPhoto({required this.id, required this.url, required this.position});
 
-  factory ListingPhoto.fromJson(Map<String, dynamic> json) =>
-      ListingPhoto(id: json['id'], url: json['url'], position: json['position'] ?? 0);
+  factory ListingPhoto.fromJson(Map<String, dynamic> json) => ListingPhoto(
+    id: json['id'],
+    url: json['url'],
+    position: json['position'] ?? 0,
+  );
 }
 
 class Listing {
@@ -24,6 +27,7 @@ class Listing {
   final int bedrooms;
   final int bathrooms;
   final int maxGuests;
+
   /// Always a true per-night amount, regardless of the listing's stay type -
   /// see `PricingUnit`'s doc comment. Use [displayRate] / [displayUnitLabel]
   /// for anything shown to a host or guest, never this raw figure directly.
@@ -52,6 +56,15 @@ class Listing {
   final bool instantBook;
   final bool isPublished;
   final List<ListingPhoto> photos;
+
+  // Computed server-side per request (see get_listing() in the backend) -
+  // not writable, so there's no matching entry in toCreateJson().
+  final String hostName;
+  final String? hostAvatarUrl;
+  final int hostReviewCount;
+  final double? hostRating;
+  final int hostYearsHosting;
+  final bool isGuestFavourite;
 
   Listing({
     required this.id,
@@ -83,67 +96,83 @@ class Listing {
     required this.instantBook,
     required this.isPublished,
     required this.photos,
+    this.hostName = '',
+    this.hostAvatarUrl,
+    this.hostReviewCount = 0,
+    this.hostRating,
+    this.hostYearsHosting = 0,
+    this.isGuestFavourite = false,
   });
 
   factory Listing.fromJson(Map<String, dynamic> json) => Listing(
-        id: json['id'],
-        hostId: json['host_id'],
-        title: json['title'],
-        description: json['description'],
-        city: json['city'],
-        neighborhoodLandmark: json['neighborhood_landmark'],
-        latitude: (json['latitude'] as num).toDouble(),
-        longitude: (json['longitude'] as num).toDouble(),
-        propertyType: json['property_type'],
-        bedrooms: json['bedrooms'] ?? 1,
-        bathrooms: json['bathrooms'] ?? 1,
-        maxGuests: json['max_guests'] ?? 2,
-        nightlyRate: (json['nightly_rate'] as num).toDouble(),
-        weeklyDiscountPercent: (json['weekly_discount_percent'] as num?)?.toDouble() ?? 0,
-        monthlyDiscountPercent: (json['monthly_discount_percent'] as num?)?.toDouble() ?? 0,
-        cleaningFee: (json['cleaning_fee'] as num?)?.toDouble() ?? 0,
-        minimumNights: json['minimum_nights'] ?? 1,
-        breakfastIncluded: json['breakfast_included'] ?? false,
-        amenities: List<String>.from(json['amenities'] ?? []),
-        houseRules: json['house_rules'],
-        hasGenerator: json['has_generator'] ?? false,
-        hasInverter: json['has_inverter'] ?? false,
-        has24hrElectricity: json['has_24hr_electricity'] ?? false,
-        isGatedEstate: json['is_gated_estate'] ?? false,
-        hasSecurityGuard: json['has_security_guard'] ?? false,
-        hasCctv: json['has_cctv'] ?? false,
-        instantBook: json['instant_book'] ?? false,
-        isPublished: json['is_published'] ?? true,
-        photos: (json['photos'] as List<dynamic>? ?? []).map((p) => ListingPhoto.fromJson(p)).toList(),
-      );
+    id: json['id'],
+    hostId: json['host_id'],
+    title: json['title'],
+    description: json['description'],
+    city: json['city'],
+    neighborhoodLandmark: json['neighborhood_landmark'],
+    latitude: (json['latitude'] as num).toDouble(),
+    longitude: (json['longitude'] as num).toDouble(),
+    propertyType: json['property_type'],
+    bedrooms: json['bedrooms'] ?? 1,
+    bathrooms: json['bathrooms'] ?? 1,
+    maxGuests: json['max_guests'] ?? 2,
+    nightlyRate: (json['nightly_rate'] as num).toDouble(),
+    weeklyDiscountPercent:
+        (json['weekly_discount_percent'] as num?)?.toDouble() ?? 0,
+    monthlyDiscountPercent:
+        (json['monthly_discount_percent'] as num?)?.toDouble() ?? 0,
+    cleaningFee: (json['cleaning_fee'] as num?)?.toDouble() ?? 0,
+    minimumNights: json['minimum_nights'] ?? 1,
+    breakfastIncluded: json['breakfast_included'] ?? false,
+    amenities: List<String>.from(json['amenities'] ?? []),
+    houseRules: json['house_rules'],
+    hasGenerator: json['has_generator'] ?? false,
+    hasInverter: json['has_inverter'] ?? false,
+    has24hrElectricity: json['has_24hr_electricity'] ?? false,
+    isGatedEstate: json['is_gated_estate'] ?? false,
+    hasSecurityGuard: json['has_security_guard'] ?? false,
+    hasCctv: json['has_cctv'] ?? false,
+    instantBook: json['instant_book'] ?? false,
+    isPublished: json['is_published'] ?? true,
+    photos: (json['photos'] as List<dynamic>? ?? [])
+        .map((p) => ListingPhoto.fromJson(p))
+        .toList(),
+    hostName: json['host_name'] ?? '',
+    hostAvatarUrl: json['host_avatar_url'],
+    hostReviewCount: json['host_review_count'] ?? 0,
+    hostRating: (json['host_rating'] as num?)?.toDouble(),
+    hostYearsHosting: json['host_years_hosting'] ?? 0,
+    isGuestFavourite: json['is_guest_favourite'] ?? false,
+  );
 
   Map<String, dynamic> toCreateJson() => {
-        'title': title,
-        'description': description,
-        'city': city,
-        'neighborhood_landmark': neighborhoodLandmark,
-        'latitude': latitude,
-        'longitude': longitude,
-        'property_type': propertyType,
-        'bedrooms': bedrooms,
-        'bathrooms': bathrooms,
-        'max_guests': maxGuests,
-        'nightly_rate': nightlyRate,
-        'weekly_discount_percent': weeklyDiscountPercent,
-        'monthly_discount_percent': monthlyDiscountPercent,
-        'cleaning_fee': cleaningFee,
-        'minimum_nights': minimumNights,
-        'breakfast_included': breakfastIncluded,
-        'amenities': amenities,
-        'house_rules': houseRules,
-        'has_generator': hasGenerator,
-        'has_inverter': hasInverter,
-        'has_24hr_electricity': has24hrElectricity,
-        'is_gated_estate': isGatedEstate,
-        'has_security_guard': hasSecurityGuard,
-        'has_cctv': hasCctv,
-        'instant_book': instantBook,
-      };
+    'title': title,
+    'description': description,
+    'city': city,
+    'neighborhood_landmark': neighborhoodLandmark,
+    'latitude': latitude,
+    'longitude': longitude,
+    'property_type': propertyType,
+    'bedrooms': bedrooms,
+    'bathrooms': bathrooms,
+    'max_guests': maxGuests,
+    'nightly_rate': nightlyRate,
+    'weekly_discount_percent': weeklyDiscountPercent,
+    'monthly_discount_percent': monthlyDiscountPercent,
+    'cleaning_fee': cleaningFee,
+    'minimum_nights': minimumNights,
+    'breakfast_included': breakfastIncluded,
+    'amenities': amenities,
+    'house_rules': houseRules,
+    'has_generator': hasGenerator,
+    'has_inverter': hasInverter,
+    'has_24hr_electricity': has24hrElectricity,
+    'is_gated_estate': isGatedEstate,
+    'has_security_guard': hasSecurityGuard,
+    'has_cctv': hasCctv,
+    'instant_book': instantBook,
+  };
 
   /// The pricing unit this listing's stay type is quoted in.
   PricingUnit get pricingUnit => pricingUnitFor(propertyType);
@@ -173,11 +202,13 @@ class AvailabilityBlock {
     required this.overrideNightlyRate,
   });
 
-  factory AvailabilityBlock.fromJson(Map<String, dynamic> json) => AvailabilityBlock(
+  factory AvailabilityBlock.fromJson(Map<String, dynamic> json) =>
+      AvailabilityBlock(
         id: json['id'],
         startDate: DateTime.parse(json['start_date']),
         endDate: DateTime.parse(json['end_date']),
         isBlocked: json['is_blocked'] ?? true,
-        overrideNightlyRate: (json['override_nightly_rate'] as num?)?.toDouble(),
+        overrideNightlyRate: (json['override_nightly_rate'] as num?)
+            ?.toDouble(),
       );
 }

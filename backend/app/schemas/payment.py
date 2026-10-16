@@ -10,9 +10,7 @@ class PaymentInitializeRequest(BaseModel):
 
 class PaymentInitializeResponse(BaseModel):
     reference: str
-    authorization_url: str
-    public_key: str
-    amount_kobo: int
+    checkout_url: str
     email: str
 
 

@@ -26,7 +26,7 @@ class Payment(UUIDMixin, TimestampMixin, Base):
         Enum(PaymentStatus, name="payment_status", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
         default=PaymentStatus.INITIALIZED,
     )
-    paystack_authorization_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    paystack_raw_response: Mapped[str | None] = mapped_column(String, nullable=True)
+    checkout_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    provider_raw_response: Mapped[str | None] = mapped_column(String, nullable=True)
 
     booking = relationship("Booking", back_populates="payments")

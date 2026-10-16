@@ -6,11 +6,12 @@ import 'package:staynaija_shared/core/api/dio_client.dart';
 import 'package:staynaija_shared/core/theme/app_theme.dart';
 import 'package:staynaija_shared/bookings/payment_repository.dart';
 
-/// Opens Paystack's real hosted checkout page (from the authorization_url the backend
-/// obtained via Paystack's Initialize Transaction API) in a WebView. Paystack doesn't
-/// know about a callback URL we control here, so completion is detected two ways:
-/// the WebView surfacing Paystack's own "successful" confirmation page, and a manual
-/// "I've completed payment" fallback that calls /payments/verify directly.
+/// Opens Flutterwave's real hosted checkout page (from the checkout_url the backend
+/// obtained via Flutterwave's Initialize Transaction API) in a WebView. Flutterwave
+/// redirects back to the backend's fixed sentinel URL (see PAYMENT_REDIRECT_URL) with
+/// `status`/`tx_ref`/`transaction_id` query params once the guest finishes, which this
+/// screen matches directly - plus a manual "I've completed payment" fallback that
+/// calls /payments/verify directly, in case the redirect never fires.
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key, required this.bookingId});
 
@@ -19,6 +20,11 @@ class CheckoutScreen extends StatefulWidget {
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
+
+/// Must match the backend's PAYMENT_REDIRECT_URL in app/api/v1/payments.py - it
+/// never needs to actually resolve, since onNavigationRequest intercepts it below
+/// before the WebView would load it.
+const _paymentRedirectUrl = 'https://staynaija.app/payment-complete';
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _paymentRepository = PaymentRepository();
@@ -41,14 +47,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ..setNavigationDelegate(
           NavigationDelegate(
             onNavigationRequest: (request) {
-              if (request.url.contains('/close') || request.url.toLowerCase().contains('success')) {
-                _verifyPayment();
+              if (request.url.startsWith(_paymentRedirectUrl)) {
+                final status = Uri.parse(request.url).queryParameters['status'];
+                if (status == 'successful' || status == 'completed') {
+                  _verifyPayment();
+                } else {
+                  setState(() => _error = 'Payment was not successful. Please try again.');
+                }
+                return NavigationDecision.prevent;
               }
               return NavigationDecision.navigate;
             },
           ),
         )
-        ..loadRequest(Uri.parse(init.authorizationUrl));
+        ..loadRequest(Uri.parse(init.checkoutUrl));
       setState(() {
         _paymentInit = init;
         _controller = controller;

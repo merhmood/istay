@@ -85,7 +85,7 @@ class Booking {
   final double totalPrice;
   final BookingStatus status;
   final DateTime? payoutReleaseAt;
-  final String? paystackReference;
+  final String? paymentReference;
 
   Booking({
     required this.id,
@@ -104,7 +104,7 @@ class Booking {
     required this.totalPrice,
     required this.status,
     required this.payoutReleaseAt,
-    required this.paystackReference,
+    required this.paymentReference,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) => Booking(
@@ -124,6 +124,6 @@ class Booking {
         totalPrice: (json['total_price'] as num).toDouble(),
         status: BookingStatus.fromApi(json['status']),
         payoutReleaseAt: json['payout_release_at'] != null ? DateTime.parse(json['payout_release_at']) : null,
-        paystackReference: json['paystack_reference'],
+        paymentReference: json['payment_reference'],
       );
 }

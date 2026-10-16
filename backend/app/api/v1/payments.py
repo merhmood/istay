@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime, time, timedelta, timezone
 
@@ -5,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.booking import Booking, BookingStatus
@@ -19,7 +19,9 @@ from app.schemas.payment import (
     PaymentVerifyRequest,
 )
 from app.schemas.booking import BookingOut
-from app.services.paystack import PaystackError, initialize_transaction, verify_transaction
+from app.services.flutterwave import FlutterwaveError, initialize_transaction, verify_transaction
+
+PAYMENT_REDIRECT_URL = "https://staynaija.app/payment-complete"
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 
@@ -42,26 +44,26 @@ async def initialize_payment(
     reference = f"stn_{uuid.uuid4().hex[:20]}"
 
     try:
-        paystack_data = await initialize_transaction(current_user.email, float(booking.total_price), reference)
-    except PaystackError as exc:
+        flutterwave_data = await initialize_transaction(
+            current_user.email, float(booking.total_price), reference, PAYMENT_REDIRECT_URL
+        )
+    except FlutterwaveError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
-    booking.paystack_reference = reference
+    booking.payment_reference = reference
     payment = Payment(
         booking_id=booking.id,
         reference=reference,
         amount=booking.total_price,
         status=PaymentStatus.INITIALIZED,
-        paystack_authorization_url=paystack_data.get("authorization_url"),
+        checkout_url=flutterwave_data.get("link"),
     )
     db.add(payment)
     await db.commit()
 
     return PaymentInitializeResponse(
         reference=reference,
-        authorization_url=paystack_data.get("authorization_url", ""),
-        public_key=settings.paystack_public_key,
-        amount_kobo=int(round(float(booking.total_price) * 100)),
+        checkout_url=flutterwave_data.get("link", ""),
         email=current_user.email,
     )
 
@@ -127,10 +129,12 @@ async def verify_payment(
 
     try:
         verification = await verify_transaction(payload.reference)
-    except PaystackError as exc:
+    except FlutterwaveError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
-    if verification.get("status") == "success":
+    payment.provider_raw_response = json.dumps(verification)
+
+    if verification.get("status") == "successful":
         payment.status = PaymentStatus.SUCCESS
         booking.status = BookingStatus.CONFIRMED
         # Escrow-style hold: payout is releasable 24h after check-in, per the PRD's

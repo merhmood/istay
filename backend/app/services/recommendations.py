@@ -77,19 +77,27 @@ CF_BLEND = 0.35
 # ranked lower - a great taste match on the other side of the country is still
 # a bad suggestion for a feed meant to answer "what's near me that I'd like".
 MAX_RECOMMENDATION_DISTANCE_KM = 150.0
-# How much of the final score proximity may claim once the guest's location is
-# known. High enough that a far candidate can't out-rank a near one on taste
-# alone, without letting distance completely override what they actually like.
-WEIGHT_PROXIMITY = 0.35
 
 
-def proximity_score(distance_km: float) -> float:
-    """1.0 on top of the listing, decaying linearly to 0 by the cutoff distance.
+# Expanding rings for ranking, not filtering - MAX_RECOMMENDATION_DISTANCE_KM
+# above still decides what's in the pool at all. A guest a few minutes from
+# three mediocre matches should see those before a perfect-taste match two
+# hours away: feed order is primarily "closest ring first", with taste only
+# breaking ties *inside* a ring, rather than one weighted score where a great
+# taste match could out-rank a much nearer, merely-good one.
+PROXIMITY_BANDS_KM = (5.0, 15.0, 40.0, 100.0)
 
-    Smooth decay rather than a step function, so two candidates a few km apart
-    aren't scored identically just because both cleared the same cutoff.
-    """
-    return max(0.0, 1.0 - distance_km / MAX_RECOMMENDATION_DISTANCE_KM)
+
+def proximity_band(distance_km: float | None) -> int:
+    """Which ring `distance_km` falls into - 0 is closest. `None` (no guest
+    location known) sorts into the outermost ring, so distance never reorders
+    a feed that has nothing to compare it against."""
+    if distance_km is None:
+        return len(PROXIMITY_BANDS_KM)
+    for index, threshold in enumerate(PROXIMITY_BANDS_KM):
+        if distance_km <= threshold:
+            return index
+    return len(PROXIMITY_BANDS_KM)
 
 
 @dataclass

@@ -61,24 +61,18 @@ class PaymentHistoryEntry {
 
 class PaymentInit {
   final String reference;
-  final String authorizationUrl;
-  final String publicKey;
-  final int amountKobo;
+  final String checkoutUrl;
   final String email;
 
   PaymentInit({
     required this.reference,
-    required this.authorizationUrl,
-    required this.publicKey,
-    required this.amountKobo,
+    required this.checkoutUrl,
     required this.email,
   });
 
   factory PaymentInit.fromJson(Map<String, dynamic> json) => PaymentInit(
         reference: json['reference'],
-        authorizationUrl: json['authorization_url'],
-        publicKey: json['public_key'],
-        amountKobo: json['amount_kobo'],
+        checkoutUrl: json['checkout_url'],
         email: json['email'],
       );
 }

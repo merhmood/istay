@@ -63,7 +63,7 @@ class SupportScreen extends StatelessWidget {
                 ),
                 _Faq(
                   question: 'Is my card safe?',
-                  answer: 'Card details are handled entirely by Paystack and never stored on StayNaija servers.',
+                  answer: 'Card details are handled entirely by Flutterwave and never stored on StayNaija servers.',
                   isLast: true,
                 ),
               ],

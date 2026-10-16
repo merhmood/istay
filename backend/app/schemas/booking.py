@@ -43,7 +43,7 @@ class BookingOut(BaseModel):
     total_price: float
     status: BookingStatus
     payout_release_at: datetime | None
-    paystack_reference: str | None
+    payment_reference: str | None
 
 
 class BookingStatusUpdate(BaseModel):
