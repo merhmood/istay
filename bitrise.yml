@@ -176,7 +176,15 @@ workflows:
           inputs:
             - deploy_path: $APP_DIR/build/app/outputs/flutter-apk
 
-meta:
-  bitrise.io:
-    stack: osx-xcode-15.4.x
-    machine_type_id: g2-m1.4core
+# No app-level default stack/machine here on purpose: a macOS default (needed
+# for deploy_guest_ios/deploy_host_ios) gets validated against the account's
+# available machines the moment bitrise.yml is accepted as the git-stored
+# config - on an account with no Mac access yet, that rejects the whole file,
+# blocking even the two Android workflows below, which don't need a Mac at
+# all and already set their own linux-docker-android-22.04 stack explicitly.
+# Once this Bitrise account has Mac machine access, restore this block (or
+# add the same two lines directly under each iOS workflow's own `meta:`,
+# matching the Android workflows' pattern) so deploy_guest_ios/deploy_host_ios
+# have a stack to build on:
+#   stack: osx-xcode-15.4.x
+#   machine_type_id: g2-m1.4core
