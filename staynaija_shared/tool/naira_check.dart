@@ -6,6 +6,6 @@ void main() {
   print('RESULT: [$result]');
   print('LENGTH: ${result.length}');
   for (final ch in result.runes) {
-    print(String.fromCharCode(ch) + ' -> U+' + ch.toRadixString(16));
+    print('${String.fromCharCode(ch)} -> U+${ch.toRadixString(16)}');
   }
 }
