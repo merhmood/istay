@@ -36,6 +36,7 @@ jobs:
         run: echo "IMAGE_REPO=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')-backend" >> "$GITHUB_ENV"
 
       - name: Build and push image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./backend
@@ -56,6 +57,8 @@ jobs:
           BUNNY_APP_ID: ${{ vars.BUNNY_APP_ID }}
           CONTAINER_NAME: staynaija-backend
           IMAGE_TAG: ${{ github.sha }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_NAMESPACE: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
           app=$(curl -sS -f -H "AccessKey: $BUNNY_API_KEY" -H "Accept: application/json" \
@@ -68,10 +71,18 @@ jobs:
           fi
           echo "Current image settings for $container_id:"
           echo "$app" | jq --arg n "$CONTAINER_NAME" '.containerTemplates[] | select(.name == $n) | {imageRegistryId, imageNamespace, imageName, imageTag, imageDigest}'
-          echo "Rolling out tag $IMAGE_TAG"
+          # Send the whole image identity, not just the tag: the repo moved owners
+          # (stay-naijaa/staynaija-backend -> <owner>/<repo>-backend), and the
+          # container also pins an image digest that must follow the new image.
+          namespace=$(echo "$IMAGE_NAMESPACE" | tr '[:upper:]' '[:lower:]')
+          name="${IMAGE_REPO##*/}"
+          body=$(jq -n --arg id "$container_id" --arg tag "$IMAGE_TAG" --arg digest "$IMAGE_DIGEST" \
+            --arg ns "$namespace" --arg name "$name" \
+            '{id: $id, imageNamespace: $ns, imageName: $name, imageTag: $tag, imageDigest: $digest}')
+          echo "Rolling out $namespace/$name:$IMAGE_TAG ($IMAGE_DIGEST)"
           status=$(curl -sS -o response.json -w '%{http_code}' -X PATCH \
             -H "AccessKey: $BUNNY_API_KEY" -H "Content-Type: application/json" \
-            -d "{\"id\":\"$container_id\",\"imageTag\":\"$IMAGE_TAG\"}" \
+            -d "$body" \
             "https://api.bunny.net/mc/apps/$BUNNY_APP_ID/containers/$container_id")
           echo "PATCH status: $status"
           cat response.json; echo
