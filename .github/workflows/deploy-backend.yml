@@ -45,10 +45,34 @@ jobs:
       # Prerequisite: an app must already exist on Magic Containers (created
       # once, by hand, via the Bunny dashboard) before this can roll it -
       # see docs/deploy-backend.md for that one-time setup.
+      # Same two calls BunnyWay/actions/container-update-image makes, done by
+      # hand because that action swallows the response body: when the PATCH
+      # failed with a bare "HTTP status 404" there was no way to tell why. This
+      # prints the container's current image settings (no env vars/secrets) and
+      # Bunny's actual error message.
       - name: Roll out on Magic Containers
-        uses: BunnyWay/actions/container-update-image@main
-        with:
-          app_id: ${{ vars.BUNNY_APP_ID }}
-          api_key: ${{ secrets.BUNNY_API_KEY }}
-          container: staynaija-backend
-          image_tag: "${{ github.sha }}"
+        env:
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+          BUNNY_APP_ID: ${{ vars.BUNNY_APP_ID }}
+          CONTAINER_NAME: staynaija-backend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          app=$(curl -sS -f -H "AccessKey: $BUNNY_API_KEY" -H "Accept: application/json" \
+            "https://api.bunny.net/mc/apps/$BUNNY_APP_ID")
+          container_id=$(echo "$app" | jq -r --arg n "$CONTAINER_NAME" '.containerTemplates[] | select(.name == $n) | .id')
+          if [ -z "$container_id" ]; then
+            echo "No container named $CONTAINER_NAME. Containers in this app:"
+            echo "$app" | jq -r '.containerTemplates[].name'
+            exit 1
+          fi
+          echo "Current image settings for $container_id:"
+          echo "$app" | jq --arg n "$CONTAINER_NAME" '.containerTemplates[] | select(.name == $n) | {imageRegistryId, imageNamespace, imageName, imageTag, imageDigest}'
+          echo "Rolling out tag $IMAGE_TAG"
+          status=$(curl -sS -o response.json -w '%{http_code}' -X PATCH \
+            -H "AccessKey: $BUNNY_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"id\":\"$container_id\",\"imageTag\":\"$IMAGE_TAG\"}" \
+            "https://api.bunny.net/mc/apps/$BUNNY_APP_ID/containers/$container_id")
+          echo "PATCH status: $status"
+          cat response.json; echo
+          [ "$status" = "200" ]
