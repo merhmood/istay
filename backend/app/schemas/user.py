@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import Field, BaseModel, ConfigDict, EmailStr
 
 
 class UserRegister(BaseModel):
@@ -10,6 +10,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     phone_number: str | None = None
+    #: Ignored by the server - see SocialLoginRequest.is_host.
     is_host: bool = False
 
 
@@ -28,8 +29,9 @@ class SocialLoginRequest(BaseModel):
     #: the client captures it then and passes it through here; every other
     #: provider's name comes back inside the verified token/profile itself.
     full_name: str | None = None
-    #: Which app this sign-in came from - the host app passes True so a new
-    #: account starts host-enabled, matching how /register already works.
+    #: Ignored by the server: host accounts are only ever created or enabled
+    #: by the iStay team (see POST /admin/hosts). Kept so older clients that
+    #: still send it don't fail validation.
     is_host: bool = False
 
 
@@ -42,6 +44,7 @@ class UserOut(BaseModel):
     phone_number: str | None
     is_host: bool
     is_admin: bool
+    must_change_password: bool = False
     phone_verified: bool
     email_verified: bool
     verification_status: str
@@ -58,7 +61,6 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     phone_number: str | None = None
     avatar_url: str | None = None
-    is_host: bool | None = None
     payout_bank_name: str | None = None
     payout_account_number: str | None = None
     payout_account_name: str | None = None
@@ -111,3 +113,35 @@ class VerifyOtp(BaseModel):
 class OtpResponse(BaseModel):
     message: str
     dev_otp_code: str | None = None
+
+
+class HostCreate(BaseModel):
+    """Admin request to onboard a vetted host: promotes an existing account by
+    email, or creates one when a password is supplied."""
+
+    email: EmailStr
+    full_name: str | None = None
+    phone_number: str | None = None
+    password: str | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    #: Omitted/ignored for accounts that signed up with Google/Apple/Facebook and
+    #: never had a password - they can set one without proving a current one.
+    current_password: str | None = None
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    dev_reset_code: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str = Field(min_length=8, max_length=128)

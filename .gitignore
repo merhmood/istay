@@ -24,3 +24,6 @@ Thumbs.db
 host_app/assets/guest.jpg
 host_app/assets/paid.jpg
 host_app/assets/bookings.jpg
+
+# Internal audit report, not part of the repo
+docs/StayNaija-Launch-Readiness-Audit.pdf

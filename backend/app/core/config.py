@@ -14,6 +14,10 @@ class Settings(BaseSettings):
 
     flutterwave_secret_key: str = "FLWSECK_TEST-replace-me"
     flutterwave_public_key: str = "FLWPUBK_TEST-replace-me"
+    # The "secret hash" set on the Flutterwave dashboard's webhook settings;
+    # Flutterwave echoes it back in the `verif-hash` header of every webhook.
+    # Empty means the webhook endpoint rejects everything.
+    flutterwave_webhook_secret_hash: str = ""
 
     # Social sign-in. Comma-separated because a mobile app typically registers
     # a different OAuth client per platform (Android/iOS/web) that must all be
@@ -27,6 +31,26 @@ class Settings(BaseSettings):
     # Host-only commission: charged against the host's payout, never added on
     # top of what the guest pays - see services/pricing.py.
     platform_commission_percent: float = 3.5
+
+    # Abuse protection - see app/core/observability.py. `rate_limit_default`
+    # applies to every route; auth/OTP/payment routes get tighter limits of
+    # their own. Limits are keyed by client IP, in-memory per process.
+    rate_limit_enabled: bool = True
+    rate_limit_default: str = "120/minute"
+
+    # Error monitoring. Empty = Sentry stays off (local dev, tests).
+    sentry_dsn: str = ""
+    sentry_traces_sample_rate: float = 0.0
+
+    # Whether the apps show the "demo logins" hint on their sign-in screens.
+    # Unset = follow ENV (shown in dev and staging, hidden in production); set
+    # SHOW_DEMO_LOGINS=true/false to force it either way.
+    show_demo_logins: bool | None = None
+
+    # Shown to prospective hosts on the host app's login screen ("Request host
+    # access"). WhatsApp is digits only, with country code, e.g. 2348012345678.
+    support_whatsapp: str = ""
+    support_email: str = ""
 
     cors_origins: str = "*"
     upload_dir: str = "uploads"
@@ -58,6 +82,12 @@ class Settings(BaseSettings):
     @property
     def is_dev(self) -> bool:
         return self.env.lower() == "dev"
+
+    @property
+    def demo_logins_enabled(self) -> bool:
+        if self.show_demo_logins is not None:
+            return self.show_demo_logins
+        return self.env.lower() in ("dev", "staging", "stag")
 
     @property
     def bunny_storage_configured(self) -> bool:

@@ -1,11 +1,13 @@
+import hmac
 import json
 import uuid
 from datetime import datetime, time, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.booking import Booking, BookingStatus
@@ -132,9 +134,30 @@ async def verify_payment(
     except FlutterwaveError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
-    payment.provider_raw_response = json.dumps(verification)
+    _apply_verification(payment, booking, verification)
 
-    if verification.get("status") == "successful":
+    await db.commit()
+    await db.refresh(booking)
+    return booking
+
+
+def _apply_verification(payment: Payment, booking: Booking, verification: dict) -> None:
+    """Settle a payment/booking from a Flutterwave verification result.
+
+    Shared by the client-driven /verify and the server-side webhook so both
+    paths behave identically. Idempotent: an already-successful payment is
+    never downgraded or re-stamped.
+    """
+    payment.provider_raw_response = json.dumps(verification)
+    if payment.status == PaymentStatus.SUCCESS:
+        return
+
+    paid_in_full = (
+        verification.get("status") == "successful"
+        and float(verification.get("amount", 0)) >= float(payment.amount)
+        and verification.get("currency", "NGN") == payment.currency
+    )
+    if paid_in_full:
         payment.status = PaymentStatus.SUCCESS
         booking.status = BookingStatus.CONFIRMED
         # Escrow-style hold: payout is releasable 24h after check-in, per the PRD's
@@ -145,6 +168,43 @@ async def verify_payment(
     else:
         payment.status = PaymentStatus.FAILED
 
+
+@router.post("/webhook", include_in_schema=False)
+async def flutterwave_webhook(
+    request: Request,
+    verif_hash: str | None = Header(default=None, alias="verif-hash"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Server-to-server confirmation from Flutterwave, so a booking is confirmed
+    even if the guest's app never gets to call /verify (dropped connection)."""
+    expected = settings.flutterwave_webhook_secret_hash
+    if not expected or not verif_hash or not hmac.compare_digest(verif_hash, expected):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid signature")
+
+    body = await request.json()
+    reference = (body.get("data") or {}).get("tx_ref")
+    if not reference:
+        return {"status": "ignored"}
+
+    result = await db.execute(select(Payment).where(Payment.reference == reference))
+    payment = result.scalar_one_or_none()
+    if not payment:
+        return {"status": "ignored"}
+    if payment.status == PaymentStatus.SUCCESS:
+        return {"status": "ok"}
+
+    booking_result = await db.execute(select(Booking).where(Booking.id == payment.booking_id))
+    booking = booking_result.scalar_one_or_none()
+    if not booking:
+        return {"status": "ignored"}
+
+    # Never trust the webhook body: re-verify with Flutterwave. A 5xx makes
+    # Flutterwave retry the webhook later.
+    try:
+        verification = await verify_transaction(reference)
+    except FlutterwaveError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+    _apply_verification(payment, booking, verification)
     await db.commit()
-    await db.refresh(booking)
-    return booking
+    return {"status": "ok"}

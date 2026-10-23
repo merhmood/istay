@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import String, case, cast, func, select, union_all
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -797,8 +798,21 @@ async def delete_listing(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     listing = await _get_owned_listing(listing_id, current_user, db)
-    await db.delete(listing)
-    await db.commit()
+    has_bookings = await db.scalar(select(func.count()).select_from(Booking).where(Booking.listing_id == listing.id))
+    if has_bookings:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This listing has bookings and can't be deleted. Unpublish it instead.",
+        )
+    try:
+        await db.delete(listing)
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This listing has guest activity and can't be deleted. Unpublish it instead.",
+        ) from exc
 
 
 @router.post("/{listing_id}/photos", response_model=ListingPhotoOut, status_code=status.HTTP_201_CREATED)

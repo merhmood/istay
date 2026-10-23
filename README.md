@@ -1,4 +1,4 @@
-# StayNaija
+# iStay
 
 A localized Airbnb-style short-let marketplace for the Nigerian market: a Flutter app backed by a FastAPI + PostgreSQL service.
 

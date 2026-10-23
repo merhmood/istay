@@ -100,6 +100,7 @@ list) - the ones that matter most to get right:
 | `DATABASE_URL` | your Neon connection string from step 2, with `+asyncpg` added to the scheme |
 | `JWT_SECRET` | a real long random value - never the `change-me-...` placeholder |
 | `FLUTTERWAVE_SECRET_KEY` / `FLUTTERWAVE_PUBLIC_KEY` | your real test or live Flutterwave keys |
+| `FLUTTERWAVE_WEBHOOK_SECRET_HASH` | the secret hash you set in Flutterwave dashboard → Settings → Webhooks; set the webhook URL to `https://<your-host>/api/v1/payments/webhook` |
 | `ENV` | `production` |
 | `PUBLIC_BASE_URL` | fill in *after* deploying once you know the app's Bunny-assigned URL (or your custom domain) - only used if Bunny Storage isn't configured, see `app/services/storage.py` |
 | `CORS_ORIGINS` | your real app origins once known, instead of `*` |

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, false
+from sqlalchemy import Integer, Boolean, DateTime, String, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -28,6 +28,8 @@ class User(UUIDMixin, TimestampMixin, Base):
     # Staff who can approve/reject verification documents - see api/v1/admin.py.
     # Set by hand in the database; there is no signup path that grants this.
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Set when an admin issues a temporary password; cleared on the first change.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     phone_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -46,5 +48,11 @@ class User(UUIDMixin, TimestampMixin, Base):
 
     otp_code_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     otp_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Password-reset code, kept apart from the phone-verification OTP above so
+    # requesting one never invalidates the other.
+    reset_code_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reset_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reset_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     listings = relationship("Listing", back_populates="host", cascade="all, delete-orphan")
