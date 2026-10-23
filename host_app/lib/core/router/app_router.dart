@@ -6,10 +6,10 @@ import 'package:staynaija_shared/auth/auth_provider.dart';
 import 'package:staynaija_shared/models/listing.dart';
 import 'package:staynaija_host/core/onboarding/onboarding_provider.dart';
 import 'package:staynaija_host/core/router/app_shell.dart';
-import 'package:staynaija_host/features/admin/admin_verifications_screen.dart';
+import 'package:staynaija_host/features/admin/admin_hosts_screen.dart';
+import 'package:staynaija_shared/auth/change_password_screen.dart';
 import 'package:staynaija_host/features/host/analytics_screen.dart';
 import 'package:staynaija_host/features/auth/login_screen.dart';
-import 'package:staynaija_host/features/auth/register_screen.dart';
 import 'package:staynaija_host/features/onboarding/onboarding_screen.dart';
 import 'package:staynaija_host/features/host/booking_requests_screen.dart';
 import 'package:staynaija_host/features/host/calendar_management_screen.dart';
@@ -25,7 +25,10 @@ import 'package:staynaija_host/features/support/support_screen.dart';
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(authProvider, (previous, next) {
-      if (previous?.status != next.status) notifyListeners();
+      if (previous?.status != next.status ||
+          previous?.user?.mustChangePassword != next.user?.mustChangePassword) {
+        notifyListeners();
+      }
     });
   }
 }
@@ -44,17 +47,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (ref.read(hasSeenOnboardingProvider) && onOnboarding) return '/';
 
       final authState = ref.read(authProvider);
-      final loggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/register';
+      final loggingIn = state.matchedLocation == '/login';
 
       if (authState.status == AuthStatus.unknown) return null;
       if (authState.status == AuthStatus.unauthenticated && !loggingIn) return '/login';
-      if (authState.status == AuthStatus.authenticated && loggingIn) return '/';
+      if (authState.status == AuthStatus.authenticated) {
+        // An admin-issued temporary password has to be replaced before anything
+        // else in the app is reachable.
+        final mustChange = authState.user?.mustChangePassword ?? false;
+        final onChangePassword = state.matchedLocation == '/change-password';
+        if (mustChange && !onChangePassword) return '/change-password';
+        if (!mustChange && onChangePassword) return '/';
+        if (loggingIn) return '/';
+      }
       return null;
     },
     routes: [
       GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(
+        path: '/change-password',
+        builder: (context, state) => Consumer(
+          builder: (context, ref, _) => ChangePasswordScreen(
+            forced: true,
+            onChanged: () => ref.read(authProvider.notifier).refreshUser(),
+            onLogout: () => ref.read(authProvider.notifier).logout(),
+          ),
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) => AppShell(navigationShell: navigationShell),
         branches: [
@@ -67,7 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/earnings', builder: (context, state) => const EarningsScreen()),
       GoRoute(path: '/analytics', builder: (context, state) => const AnalyticsScreen()),
-      GoRoute(path: '/admin/verifications', builder: (context, state) => const AdminVerificationsScreen()),
+      GoRoute(path: '/admin/hosts', builder: (context, state) => const AdminHostsScreen()),
       GoRoute(path: '/support', builder: (context, state) => const SupportScreen()),
       GoRoute(path: '/listings/new', builder: (context, state) => const CreateEditListingScreen()),
       GoRoute(

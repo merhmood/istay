@@ -20,7 +20,8 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: const DrawerMenuButton(),
-        title: Text('StayNaija', style: brandTextStyle(fontSize: 26)),
+        centerTitle: true,
+        title: Text('iStay', style: brandTextStyle(fontSize: 26)),
         actions: [
           IconButton(
             icon: const HeroIcon(HeroIcons.heart, style: HeroIconStyle.outline),

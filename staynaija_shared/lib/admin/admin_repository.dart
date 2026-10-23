@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:staynaija_shared/core/api/dio_client.dart';
+import 'package:staynaija_shared/models/user.dart';
 
 final adminRepositoryProvider = Provider((ref) => AdminRepository());
 
@@ -53,6 +54,29 @@ class AdminRepository {
   Future<List<VerificationRequest>> listVerifications({String status = 'pending'}) async {
     final response = await _dio.get('/admin/verifications', queryParameters: {'status': status});
     return (response.data as List).map((json) => VerificationRequest.fromJson(json)).toList();
+  }
+
+  Future<List<AppUser>> listHosts() async {
+    final response = await _dio.get('/admin/hosts');
+    return (response.data as List).map((json) => AppUser.fromJson(json)).toList();
+  }
+
+  /// Onboards a vetted host. For an email with no account yet, [password] is a
+  /// temporary one the host is forced to replace at first login; for an
+  /// existing account it is ignored and the account is simply promoted.
+  Future<AppUser> createHost({
+    required String email,
+    String? fullName,
+    String? phoneNumber,
+    String? password,
+  }) async {
+    final response = await _dio.post('/admin/hosts', data: {
+      'email': email,
+      'full_name': fullName,
+      'phone_number': phoneNumber,
+      'password': password,
+    });
+    return AppUser.fromJson(response.data);
   }
 
   Future<void> reviewVerification(String userId, {required bool approve}) async {

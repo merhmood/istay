@@ -145,7 +145,7 @@ final _nairaFormat = NumberFormat.currency(locale: 'en_NG', symbol: '₦', decim
 
 String formatNaira(num amount) => _nairaFormat.format(amount);
 
-/// Wordmark style for the "StayNaija" brand name - use for logo-type text
+/// Wordmark style for the "iStay" brand name - use for logo-type text
 /// (splash/login titles, app bar brand), not for body copy.
 TextStyle brandTextStyle({double fontSize = 32, Color color = AppColors.primary}) =>
     GoogleFonts.baloo2(fontSize: fontSize, fontWeight: FontWeight.w700, color: color, height: 1.2);

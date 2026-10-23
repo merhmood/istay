@@ -232,7 +232,7 @@ class _ParallaxListingBodyState extends ConsumerState<_ParallaxListingBody> {
                     icon: LucideIcons.share,
                     onTap: () => SharePlus.instance.share(
                       ShareParams(
-                        text: '${listing.title} on StayNaija - check it out!',
+                        text: '${listing.title} on iStay - check it out!',
                       ),
                     ),
                   ),
@@ -825,7 +825,7 @@ class _GuestFavouriteBadge extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               const Text(
-                'This home is among the highest-rated on StayNaija, based on '
+                'This home is among the highest-rated on iStay, based on '
                 'ratings and review count from guests who have actually stayed here.',
                 style: TextStyle(
                   color: AppColors.textSecondary,

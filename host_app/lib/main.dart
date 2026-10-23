@@ -39,7 +39,7 @@ class StayNaijaHostApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'StayNaija Host',
+      title: 'iStay Host',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

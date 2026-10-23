@@ -22,7 +22,7 @@ class DrawerMenuButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
-      icon: Icon(LucideIcons.menu, color: color),
+      icon: Icon(LucideIcons.menuFine, size: 26, color: color),
       tooltip: 'Menu',
       onPressed: () => ref.read(appScaffoldKeyProvider).currentState?.openDrawer(),
     );
@@ -116,7 +116,7 @@ class AppDrawer extends ConsumerWidget {
               ),
             Padding(
               padding: const EdgeInsets.only(bottom: 12, top: 4),
-              child: Text('StayNaija', style: brandTextStyle(fontSize: 16, color: AppColors.textSecondary)),
+              child: Text('iStay', style: brandTextStyle(fontSize: 16, color: AppColors.textSecondary)),
             ),
           ],
         ),

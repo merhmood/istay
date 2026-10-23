@@ -7,7 +7,7 @@ import 'package:staynaija_shared/core/theme/bold_icons.dart';
 /// A consistent "something went wrong" state for a failed API call, in place
 /// of a bare error `Text` - distinguishes network/connectivity failures
 /// (where a retry often just works) from 400s (the request itself was
-/// wrong - retrying the same thing won't help) and 500s (StayNaija's own
+/// wrong - retrying the same thing won't help) and 500s (iStay's own
 /// fault, and often transient), each with its own icon and headline, plus a
 /// retry button wherever the caller actually has something to retry.
 class ApiErrorView extends StatelessWidget {

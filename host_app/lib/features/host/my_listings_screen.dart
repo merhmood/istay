@@ -73,13 +73,48 @@ class MyListingsScreen extends ConsumerWidget {
   }
 }
 
-class _ListingTile extends StatelessWidget {
+class _ListingTile extends ConsumerWidget {
   const _ListingTile({required this.listing});
 
   final Listing listing;
 
+  Future<void> _togglePublished(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(listingRepositoryProvider).setPublished(listing.id, !listing.isPublished);
+      ref.invalidate(myListingsProvider);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete listing?'),
+        content: Text('"${listing.title}" and its photos will be permanently removed. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: Colors.red.shade700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(listingRepositoryProvider).delete(listing.id);
+      ref.invalidate(myListingsProvider);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final published = listing.isPublished;
 
     return SoftCard(
@@ -179,6 +214,22 @@ class _ListingTile extends StatelessWidget {
                   icon: Icon(LucideIcons.calendarDays, size: 15),
                   label: const Text('Calendar', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
+              ),
+              Container(width: 1, height: 20, color: Colors.grey.shade200),
+              Expanded(
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(minimumSize: const Size(0, 40)),
+                  onPressed: () => _togglePublished(context, ref),
+                  icon: Icon(published ? LucideIcons.eyeOff : LucideIcons.eye, size: 15),
+                  label: Text(published ? 'Unpublish' : 'Publish',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              Container(width: 1, height: 20, color: Colors.grey.shade200),
+              IconButton(
+                tooltip: 'Delete listing',
+                onPressed: () => _delete(context, ref),
+                icon: Icon(LucideIcons.trash2, size: 16, color: Colors.red.shade700),
               ),
             ],
           ),

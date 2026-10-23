@@ -165,6 +165,8 @@ class ListingRepository {
     return Listing.fromJson(response.data);
   }
 
+  Future<Listing> setPublished(String id, bool published) => update(id, {'is_published': published});
+
   Future<void> delete(String id) => _dio.delete('/listings/$id');
 
   Future<ListingPhoto> uploadPhoto(String listingId, File file) async {

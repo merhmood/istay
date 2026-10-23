@@ -78,5 +78,18 @@ class AuthRepository {
     return AppUser.fromJson(response.data);
   }
 
+  /// Emails a one-time reset code. Returns the code only when the backend is
+  /// in dev mode (there is no email provider yet), so the flow is testable.
+  Future<String?> forgotPassword(String email) async {
+    final response = await _dio.post('/auth/forgot-password', data: {'email': email});
+    return (response.data as Map)['dev_reset_code'] as String?;
+  }
+
+  Future<void> resetPassword({required String email, required String code, required String newPassword}) =>
+      _dio.post('/auth/reset-password', data: {'email': email, 'code': code, 'new_password': newPassword});
+
+  Future<void> changePassword({String? currentPassword, required String newPassword}) =>
+      _dio.post('/auth/change-password', data: {'current_password': currentPassword, 'new_password': newPassword});
+
   Future<void> logout() => SecureStorage.clear();
 }

@@ -1,19 +1,14 @@
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:staynaija_shared/core/theme/bold_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
-import 'package:staynaija_shared/core/api/dio_client.dart';
 import 'package:staynaija_shared/core/theme/app_theme.dart';
 import 'package:staynaija_host/core/router/app_drawer.dart';
 import 'package:staynaija_shared/core/widgets/soft_card.dart';
 import 'package:staynaija_shared/auth/auth_provider.dart';
-import 'package:staynaija_shared/users/user_repository.dart';
-import 'package:staynaija_shared/models/user.dart';
-import 'package:staynaija_host/features/auth/otp_verify_screen.dart';
+import 'package:staynaija_shared/auth/change_password_screen.dart';
 import 'package:staynaija_host/features/profile/payout_card.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -86,12 +81,17 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 22),
-          const _SectionLabel('Verification'),
-          _VerificationCard(user: user),
-          const SizedBox(height: 22),
           const _SectionLabel('Payouts'),
           PayoutCard(user: user),
           const SizedBox(height: 28),
+          TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
+            ),
+            icon: Icon(LucideIcons.lockKeyhole, size: 18),
+            label: const Text('Change password'),
+          ),
           TextButton.icon(
             style: TextButton.styleFrom(
               foregroundColor: AppColors.error,
@@ -104,116 +104,6 @@ class ProfileScreen extends ConsumerWidget {
             icon: Icon(LucideIcons.logOut, size: 18),
             label: const Text('Log out'),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VerificationCard extends ConsumerStatefulWidget {
-  const _VerificationCard({required this.user});
-
-  final AppUser user;
-
-  @override
-  ConsumerState<_VerificationCard> createState() => _VerificationCardState();
-}
-
-class _VerificationCardState extends ConsumerState<_VerificationCard> {
-  bool _isUploading = false;
-  String? _error;
-
-  Future<void> _uploadDocuments() async {
-    final picker = ImagePicker();
-    final idDoc = await picker.pickImage(source: ImageSource.gallery);
-    if (idDoc == null) return;
-    final selfie = await picker.pickImage(source: ImageSource.camera, preferredCameraDevice: CameraDevice.front);
-    if (selfie == null) return;
-
-    setState(() {
-      _isUploading = true;
-      _error = null;
-    });
-    try {
-      await UserRepository().uploadVerificationDocuments(idDocument: File(idDoc.path), selfie: File(selfie.path));
-      await ref.read(authProvider.notifier).refreshUser();
-    } catch (e) {
-      setState(() => _error = apiErrorMessage(e));
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = widget.user;
-    // No title inside the card: the section label above it already says
-    // "Verification", and repeating it wasted a line and read as a mistake.
-    return SoftCard(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _statusRow('Phone number', user.phoneVerified, action: user.phoneNumber == null
-                ? null
-                : () async {
-                    final phoneNumber = user.phoneNumber!;
-                    final verified = await Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => OtpVerifyScreen(phoneNumber: phoneNumber)),
-                    );
-                    if (verified == true) await ref.read(authProvider.notifier).refreshUser();
-                  }),
-            _statusRow('Email address', user.emailVerified),
-            _statusRow('ID & selfie', user.verificationStatus == 'verified',
-                subtitle: user.verificationStatus == 'pending' ? 'Pending manual review' : null,
-                action: user.verificationStatus == 'unverified' || user.verificationStatus == 'rejected' ? _uploadDocuments : null),
-            if (_isUploading) const Padding(padding: EdgeInsets.only(top: 10, bottom: 6), child: LinearProgressIndicator()),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 10, bottom: 6),
-                child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 12.5)),
-              ),
-          ],
-        ),
-    );
-  }
-
-  /// Every row states its outcome. Previously an unverified item looked
-  /// identical to a verified one apart from the icon, with nothing saying so.
-  Widget _statusRow(String label, bool verified, {String? subtitle, VoidCallback? action}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        children: [
-          Icon(
-            verified ? LucideIcons.circleCheck : LucideIcons.circleDashed,
-            size: 19,
-            color: verified ? AppColors.primary : Colors.grey.shade400,
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 14.5)),
-                if (subtitle != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(subtitle, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
-                  ),
-              ],
-            ),
-          ),
-          if (verified)
-            const Text('Verified', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600))
-          else if (action != null)
-            TextButton(
-              style: TextButton.styleFrom(minimumSize: const Size(0, 34), padding: const EdgeInsets.symmetric(horizontal: 12)),
-              onPressed: action,
-              child: const Text('Verify', style: TextStyle(fontSize: 13)),
-            )
-          else
-            Text('Not verified', style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
         ],
       ),
     );

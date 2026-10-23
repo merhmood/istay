@@ -1,6 +1,6 @@
 {
-    "name": "staynaija",
-    "short_name": "staynaija",
+    "name": "iStay",
+    "short_name": "iStay",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

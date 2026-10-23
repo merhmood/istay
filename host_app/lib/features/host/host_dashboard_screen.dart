@@ -11,6 +11,7 @@ import 'package:staynaija_shared/core/widgets/app_refresh.dart';
 import 'package:staynaija_shared/auth/auth_provider.dart';
 import 'package:staynaija_shared/bookings/booking_repository.dart';
 import 'package:staynaija_shared/listings/listing_repository.dart';
+import 'package:staynaija_host/features/host/my_listings_screen.dart' show myListingsProvider;
 import 'package:staynaija_shared/models/booking.dart';
 
 final hostBookingsProvider = FutureProvider.autoDispose((ref) => ref.watch(bookingRepositoryProvider).myBookings(asHost: true));
@@ -61,6 +62,7 @@ class HostDashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            const _GettingStartedCard(),
             bookingsAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 60),
@@ -420,6 +422,73 @@ class _BookingSummaryTile extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// First-run checklist for a new host: what is still missing before they can
+/// take a booking and get paid. Disappears once everything is done.
+class _GettingStartedCard extends ConsumerWidget {
+  const _GettingStartedCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    final listings = ref.watch(myListingsProvider).valueOrNull;
+    if (user == null || listings == null) return const SizedBox.shrink();
+
+    final hasListing = listings.isNotEmpty;
+    final hasPayout = user.hasPayoutAccount;
+    if (hasListing && hasPayout) return const SizedBox.shrink();
+
+    Widget step(bool done, String label, String route) => InkWell(
+          onTap: done ? null : () => route == '/profile' ? context.go(route) : context.push(route),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            child: Row(
+              children: [
+                Icon(
+                  done ? LucideIcons.circleCheck : LucideIcons.circleDashed,
+                  size: 20,
+                  color: done ? AppColors.primary : Colors.grey.shade400,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      decoration: done ? TextDecoration.lineThrough : null,
+                      color: done ? AppColors.textSecondary : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                if (!done) Icon(LucideIcons.chevronRight, size: 18, color: Colors.grey.shade500),
+              ],
+            ),
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: SoftCard(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Get started', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            const Text(
+              'Two quick steps and you are ready for bookings.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 6),
+            step(hasListing, 'Create your first listing', '/listings/new'),
+            const Divider(height: 1),
+            step(hasPayout, 'Add your payout details', '/profile'),
+          ],
+        ),
       ),
     );
   }

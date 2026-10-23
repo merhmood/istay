@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">StayNaija Host</string>
+    <string name="app_name">iStay Host</string>
 
     <!-- Facebook Login. The Facebook Android SDK initialises itself at app
          startup via its own ContentProvider (merged into this app's manifest

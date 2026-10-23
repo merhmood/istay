@@ -310,6 +310,12 @@ class LucideIcons {
     fontFamily: 'Lucide500',
     fontPackage: 'lucide_icons_flutter',
   );
+  /// Hairline-weight hamburger for app bars; the rest of the set is Lucide500.
+  static const IconData menuFine = IconData(
+    57621,
+    fontFamily: 'Lucide200',
+    fontPackage: 'lucide_icons_flutter',
+  );
   static const IconData menu = IconData(
     57621,
     fontFamily: 'Lucide500',

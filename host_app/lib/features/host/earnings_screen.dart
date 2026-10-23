@@ -73,7 +73,7 @@ class EarningsScreen extends ConsumerWidget {
                       const SizedBox(height: 14),
                       _SummaryRow(
                         icon: LucideIcons.receipt,
-                        label: 'StayNaija commission (3.5%)',
+                        label: 'iStay commission (3.5%)',
                         value: formatNaira(commission),
                         muted: true,
                       ),

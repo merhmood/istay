@@ -67,7 +67,7 @@ class SupportScreen extends StatelessWidget {
                       'one photo and a map pin before guests can find them.',
                 ),
                 _Faq(
-                  question: 'What commission does StayNaija take?',
+                  question: 'What commission does iStay take?',
                   answer: 'A 12% platform fee is deducted from each booking. The payout figure shown on every '
                       'booking and in Earnings is what actually reaches your account.',
                   isLast: true,

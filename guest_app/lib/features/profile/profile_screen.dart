@@ -29,7 +29,7 @@ class ProfileScreen extends ConsumerWidget {
         appBar: AppBar(leading: const DrawerMenuButton(), title: const Text('Profile')),
         body: const SignInPrompt(
           icon: LucideIcons.userRound,
-          title: 'Sign in to StayNaija',
+          title: 'Sign in to iStay',
           message: 'Create an account to book stays, save places you like and message hosts directly.',
         ),
       );
@@ -95,10 +95,10 @@ class ProfileScreen extends ConsumerWidget {
             child: _NavRow(
               icon: LucideIcons.house,
               label: 'Become a host',
-              description: 'List a property using the StayNaija Host app',
+              description: 'List a property using the iStay Host app',
               trailingIcon: LucideIcons.arrowUpRight,
               onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Download the StayNaija Host app to list a property.')),
+                const SnackBar(content: Text('Download the iStay Host app to list a property.')),
               ),
             ),
           ),

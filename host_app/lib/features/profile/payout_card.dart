@@ -222,7 +222,7 @@ class _PayoutCardState extends ConsumerState<PayoutCard> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Add a bank account so StayNaija can send your earnings. Until you do, payouts stay '
+            'Add a bank account so iStay can send your earnings. Until you do, payouts stay '
             'held even after a guest checks out.',
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.5),
           ),
@@ -243,7 +243,7 @@ class _PayoutCardState extends ConsumerState<PayoutCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Where StayNaija sends your earnings after each stay.',
+            'Where iStay sends your earnings after each stay.',
             style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary, height: 1.45),
           ),
           const SizedBox(height: 16),

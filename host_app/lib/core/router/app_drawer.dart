@@ -17,7 +17,7 @@ class DrawerMenuButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
-      icon: Icon(LucideIcons.menu),
+      icon: Icon(LucideIcons.menuFine, size: 26),
       tooltip: 'Menu',
       onPressed: () => ref.read(appScaffoldKeyProvider).currentState?.openDrawer(),
     );
@@ -87,7 +87,7 @@ class AppDrawer extends ConsumerWidget {
                   if (user?.isAdmin ?? false) ...[
                     const Divider(height: 20, indent: 20, endIndent: 20),
                     _section('Admin'),
-                    _DrawerItem(icon: LucideIcons.shieldCheck, label: 'Verifications', route: '/admin/verifications'),
+                    _DrawerItem(icon: LucideIcons.users, label: 'Hosts', route: '/admin/hosts'),
                   ],
                   const Divider(height: 20, indent: 20, endIndent: 20),
                   _section('Support'),
@@ -106,7 +106,7 @@ class AppDrawer extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 12, top: 4),
-              child: Text('StayNaija Host', style: brandTextStyle(fontSize: 15, color: AppColors.textSecondary)),
+              child: Text('iStay Host', style: brandTextStyle(fontSize: 15, color: AppColors.textSecondary)),
             ),
           ],
         ),

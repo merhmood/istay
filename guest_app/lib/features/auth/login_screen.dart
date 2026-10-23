@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:staynaija_shared/core/theme/app_theme.dart';
 import 'package:staynaija_shared/auth/auth_hero_layout.dart';
+import 'package:staynaija_shared/auth/demo_logins_hint.dart';
 import 'package:staynaija_shared/auth/auth_provider.dart';
 import 'package:staynaija_shared/auth/social_auth_service.dart';
 import 'package:staynaija_shared/auth/social_sign_in_buttons.dart';
@@ -86,7 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.primaryDark,
       body: Column(
         children: [
-          const Expanded(child: AuthHero(subtitle: 'Find trusted short lets across Nigeria')),
+          const Expanded(child: AuthHero(logoAsset: 'assets/brand/logo.png', subtitle: 'Find trusted short lets across Nigeria')),
           AuthSignInPanel(
             error: authState.error,
             child: AnimatedSize(
@@ -180,7 +181,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          const _DemoHint(),
+          const DemoLoginsHint(),
         ],
       ),
     );
@@ -203,22 +204,4 @@ String _shortError(Object error) {
   final text = error.toString().replaceFirst(RegExp(r'^[A-Za-z.]*Exception:?\s*'), '');
   final cut = text.indexOf(RegExp(r'[.\n]'));
   return (cut > 0 ? text.substring(0, cut) : text).trim();
-}
-
-class _DemoHint extends StatelessWidget {
-  const _DemoHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
-      child: const Text(
-        'Demo logins (after running seed.py):\n'
-        'guest@staynaija.demo / host@staynaija.demo\n'
-        'password: password123',
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-      ),
-    );
-  }
 }

@@ -10,6 +10,10 @@ class AppUser {
   final String verificationStatus;
   final String? avatarUrl;
 
+  /// True after an admin issued a temporary password: the app must make the
+  /// user choose their own before doing anything else.
+  final bool mustChangePassword;
+
   /// Where a host's earnings are sent. Null until they set it up - a host with
   /// no payout account cannot be paid, so the host app surfaces that state.
   final String? payoutBankName;
@@ -27,6 +31,7 @@ class AppUser {
     required this.emailVerified,
     required this.verificationStatus,
     required this.avatarUrl,
+    this.mustChangePassword = false,
     this.payoutBankName,
     this.payoutAccountNumber,
     this.payoutAccountName,
@@ -56,6 +61,7 @@ class AppUser {
         emailVerified: json['email_verified'] ?? false,
         verificationStatus: json['verification_status'] ?? 'unverified',
         avatarUrl: json['avatar_url'],
+        mustChangePassword: json['must_change_password'] ?? false,
         payoutBankName: json['payout_bank_name'],
         payoutAccountNumber: json['payout_account_number'],
         payoutAccountName: json['payout_account_name'],

@@ -49,6 +49,7 @@ class _CreateEditListingScreenState extends State<CreateEditListingScreen> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
+  late final TextEditingController _houseRulesController;
   late final TextEditingController _cityController;
   late final TextEditingController _landmarkController;
   late final TextEditingController _priceController;
@@ -86,6 +87,7 @@ class _CreateEditListingScreenState extends State<CreateEditListingScreen> {
     final l = widget.existing;
     _titleController = TextEditingController(text: l?.title ?? '');
     _descriptionController = TextEditingController(text: l?.description ?? '');
+    _houseRulesController = TextEditingController(text: l?.houseRules ?? '');
     _cityController = TextEditingController(text: l?.city ?? '');
     _landmarkController = TextEditingController(text: l?.neighborhoodLandmark ?? '');
     _cleaningFeeController = TextEditingController(text: l?.cleaningFee.toStringAsFixed(0) ?? '0');
@@ -214,7 +216,7 @@ class _CreateEditListingScreenState extends State<CreateEditListingScreen> {
         minimumNights: _minimumNights,
         breakfastIncluded: _breakfastIncluded,
         amenities: _selectedAmenities.toList(),
-        houseRules: null,
+        houseRules: _houseRulesController.text.trim().isEmpty ? null : _houseRulesController.text.trim(),
         hasGenerator: _hasGenerator,
         hasInverter: _hasInverter,
         has24hrElectricity: _has24hrElectricity,
@@ -249,6 +251,7 @@ class _CreateEditListingScreenState extends State<CreateEditListingScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _houseRulesController.dispose();
     _cityController.dispose();
     _landmarkController.dispose();
     _priceController.dispose();
@@ -299,6 +302,13 @@ class _CreateEditListingScreenState extends State<CreateEditListingScreen> {
                       maxLines: 4,
                       decoration: _fieldDecoration(hint: 'What makes this place worth booking?'),
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 14),
+                    _fieldLabel('House rules (optional)'),
+                    TextFormField(
+                      controller: _houseRulesController,
+                      maxLines: 3,
+                      decoration: _fieldDecoration(hint: 'e.g. No smoking, no parties, quiet hours after 10pm'),
                     ),
                   ],
                 ),

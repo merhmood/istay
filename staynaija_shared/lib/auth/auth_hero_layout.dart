@@ -7,13 +7,16 @@ import 'package:staynaija_shared/core/theme/app_theme.dart';
 /// asset - a common device in this kind of hero when there is no photography
 /// to lean on.
 class AuthHero extends StatelessWidget {
-  const AuthHero({super.key, required this.subtitle, this.eyebrow});
+  const AuthHero({super.key, required this.subtitle, this.eyebrow, this.logoAsset});
 
   final String subtitle;
 
   /// A small pill above the wordmark - used by the host app to say "Host"
   /// without it looking like part of the brand name itself.
   final String? eyebrow;
+
+  /// An app-bundled image shown above the wordmark, as a rounded app-icon tile.
+  final String? logoAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +55,13 @@ class AuthHero extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            if (logoAsset != null) ...[
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: Image.asset(logoAsset!, width: 64, height: 64),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             if (eyebrow != null) ...[
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -71,7 +81,7 @@ class AuthHero extends StatelessWidget {
                               ),
                               const SizedBox(height: 14),
                             ],
-                            Text('StayNaija', style: brandTextStyle(fontSize: 42).copyWith(color: Colors.white)),
+                            Text('iStay', style: brandTextStyle(fontSize: 42).copyWith(color: Colors.white)),
                             const SizedBox(height: 10),
                             Text(
                               subtitle,

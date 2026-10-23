@@ -50,7 +50,7 @@ class EscrowScreen extends ConsumerWidget {
                           const Icon(LucideIcons.shieldCheck, color: Colors.white, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            'Protected by StayNaija',
+                            'Protected by iStay',
                             style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w600),
                           ),
                         ],

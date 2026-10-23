@@ -29,7 +29,7 @@ class StayNaijaApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'StayNaija',
+      title: 'iStay',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,

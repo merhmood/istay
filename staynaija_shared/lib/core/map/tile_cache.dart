@@ -65,7 +65,7 @@ class TileCache {
   /// A tile provider backed by the cache. Falls back to a plain network
   /// provider if init() hasn't run, so the map still works either way.
   static TileProvider provider() {
-    final headers = {'User-Agent': 'StayNaija/1.0 (https://staynaija.example)'};
+    final headers = {'User-Agent': 'iStay/1.0 (https://staynaija.example)'};
     final store = _store;
     if (store == null) return NetworkTileProvider(headers: headers);
     return CachedTileProvider(
